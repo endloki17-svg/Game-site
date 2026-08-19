@@ -3,15 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>초고퀄리티 끝말잇기</title>
+    <title>초고퀄리티 온라인 끝말잇기</title>
+    <!-- PeerJS 라이브러리 로드 -->
+    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;500;700&display=swap');
 
         :root {
             --bg-color: #0f172a;
-            --panel-bg: rgba(30, 41, 59, 0.7);
+            --panel-bg: rgba(30, 41, 59, 0.85);
             --primary: #3b82f6;
             --primary-hover: #2563eb;
+            --secondary: #10b981;
+            --secondary-hover: #059669;
             --admin-color: #ef4444;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
@@ -35,16 +39,16 @@
 
         /* 어드민 사이드바 */
         #admin-sidebar {
-            width: 350px;
-            background: rgba(0, 0, 0, 0.6);
+            width: 300px;
+            background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(10px);
-            border-right: 1px solid rgba(239, 68, 68, 0.3);
+            border-right: 1px solid rgba(239, 68, 68, 0.4);
             display: none;
             flex-direction: column;
             padding: 20px;
             box-shadow: 5px 0 20px rgba(0,0,0,0.5);
             transition: all 0.3s ease;
-            z-index: 10;
+            z-index: 100;
         }
 
         #admin-sidebar h2 {
@@ -54,10 +58,6 @@
             display: flex;
             align-items: center;
             gap: 10px;
-        }
-
-        #admin-sidebar h2::before {
-            content: "👑";
         }
 
         .db-status {
@@ -76,7 +76,6 @@
             gap: 8px;
         }
 
-        /* 스크롤바 커스텀 */
         #cheat-word-list::-webkit-scrollbar { width: 6px; }
         #cheat-word-list::-webkit-scrollbar-thumb { background: var(--admin-color); border-radius: 3px; }
 
@@ -84,7 +83,7 @@
             background: rgba(239, 68, 68, 0.1);
             border: 1px solid rgba(239, 68, 68, 0.3);
             color: var(--text-main);
-            padding: 12px;
+            padding: 10px;
             border-radius: 8px;
             cursor: pointer;
             text-align: left;
@@ -93,7 +92,7 @@
         }
 
         .cheat-word-btn:hover {
-            background: rgba(239, 68, 68, 0.4);
+            background: rgba(239, 68, 68, 0.5);
             transform: translateX(5px);
         }
 
@@ -106,8 +105,7 @@
             position: relative;
         }
 
-        /* 로그인 화면 */
-        #login-screen, #game-screen {
+        .screen {
             background: var(--panel-bg);
             backdrop-filter: blur(15px);
             padding: 40px;
@@ -117,6 +115,17 @@
             width: 100%;
             max-width: 500px;
             text-align: center;
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         h1 {
@@ -127,69 +136,107 @@
             -webkit-text-fill-color: transparent;
         }
 
-        .subtitle {
-            color: var(--text-muted);
-            margin-bottom: 30px;
-        }
+        .subtitle { color: var(--text-muted); margin-bottom: 25px; }
 
         input[type="text"] {
             width: 100%;
             padding: 15px;
             border-radius: 10px;
             border: 1px solid rgba(255,255,255,0.2);
-            background: rgba(0,0,0,0.2);
+            background: rgba(0,0,0,0.3);
             color: white;
             font-size: 1.1rem;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             outline: none;
             transition: border 0.3s;
+            text-align: center;
         }
 
-        input[type="text"]:focus {
-            border-color: var(--primary);
-        }
+        input[type="text"]:focus { border-color: var(--primary); }
+        input[type="text"]:disabled { background: rgba(0,0,0,0.5); color: #666; cursor: not-allowed; }
 
-        button.btn-primary {
+        .btn {
             width: 100%;
             padding: 15px;
             border: none;
             border-radius: 10px;
-            background: var(--primary);
             color: white;
             font-size: 1.1rem;
             font-weight: bold;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.3s;
+            margin-bottom: 10px;
         }
 
-        button.btn-primary:hover {
-            background: var(--primary-hover);
+        .btn-primary { background: var(--primary); }
+        .btn-primary:hover { background: var(--primary-hover); }
+        
+        .btn-secondary { background: var(--secondary); }
+        .btn-secondary:hover { background: var(--secondary-hover); }
+
+        .btn:disabled { background: #475569; cursor: not-allowed; transform: none; }
+
+        /* 로비 화면 전용 (버튼 그룹) */
+        .button-group { display: flex; gap: 10px; margin-top: 10px; }
+        .button-group .btn { margin-bottom: 0; }
+
+        /* 방 대기 화면 전용 */
+        .room-code-box {
+            background: rgba(0,0,0,0.4);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 1.5rem;
+            letter-spacing: 2px;
+            font-weight: bold;
+            color: #fbbf24;
+            border: 1px dashed #fbbf24;
         }
 
         /* 게임 화면 전용 */
-        #game-screen {
-            display: none;
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.3);
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
         }
+
+        .player-info { font-weight: bold; color: #60a5fa; }
+        
+        .turn-badge {
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .turn-mine { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
+        .turn-opponent { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
 
         .word-display {
             font-size: 4rem;
             font-weight: 700;
-            margin: 20px 0;
+            margin: 30px 0;
             letter-spacing: 5px;
             text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+            transition: all 0.3s;
         }
 
         .history-box {
-            margin-top: 30px;
+            margin-top: 20px;
             padding: 15px;
             background: rgba(0,0,0,0.3);
             border-radius: 10px;
-            max-height: 150px;
+            height: 120px;
             overflow-y: auto;
             text-align: left;
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            align-content: flex-start;
+            gap: 8px;
         }
 
         .history-tag {
@@ -200,176 +247,368 @@
             color: var(--text-muted);
         }
 
-        .history-tag:last-child {
-            background: rgba(59, 130, 246, 0.2);
-            color: #60a5fa;
-            border: 1px solid rgba(59, 130, 246, 0.5);
+        #message { margin-top: 10px; height: 20px; color: #ef4444; font-weight: 500; font-size: 0.9rem; }
+        
+        /* 로딩 스피너 */
+        .loader {
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px auto;
         }
-
-        #message {
-            margin-top: 15px;
-            height: 20px;
-            color: #ef4444;
-            font-weight: 500;
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
     </style>
 </head>
 <body>
 
-    <!-- 어드민(Endloki17) 전용 사이드바 -->
+    <!-- 👑 어드민 치트 사이드바 (Endloki17 전용) -->
     <div id="admin-sidebar">
         <h2>GOD MODE 활성화</h2>
-        <div class="db-status">연동된 단어 DB: 1,000,000개 로드 완료<br>클릭하여 즉시 입력하세요.</div>
-        <div id="cheat-word-list">
-            <!-- 치트 단어들이 여기에 동적으로 생성됨 -->
-        </div>
+        <div class="db-status">온라인 세션 후킹 중...<br>클릭 시 상대방 화면에 즉시 전송.</div>
+        <div id="cheat-word-list"></div>
     </div>
 
-    <!-- 메인 컨텐츠 영역 -->
     <div id="main-wrapper">
         
-        <!-- 1. 로그인 화면 -->
-        <div id="login-screen">
-            <h1>끝말잇기</h1>
-            <div class="subtitle">궁극의 두뇌 게임에 오신 것을 환영합니다.</div>
-            <input type="text" id="username" placeholder="닉네임을 입력하세요" onkeypress="if(event.key === 'Enter') login()">
-            <button class="btn-primary" onclick="login()">게임 시작</button>
+        <!-- 1. 로그인 & 로비 화면 -->
+        <div id="login-screen" class="screen active">
+            <h1>온라인 끝말잇기</h1>
+            <div class="subtitle">친구와 함께 실시간 두뇌 대결을 펼치세요!</div>
+            <input type="text" id="username" placeholder="사용할 닉네임을 입력하세요">
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="hostGame()">방 만들기</button>
+                <button class="btn btn-secondary" onclick="showJoinMenu()">방 참가하기</button>
+            </div>
+            <!-- 참가하기 폼 (처음엔 숨김) -->
+            <div id="join-menu" style="display: none; margin-top: 15px;">
+                <input type="text" id="room-code-input" placeholder="초대 코드 (예: AB12C)" style="text-transform: uppercase;">
+                <button class="btn btn-secondary" onclick="joinGame()">입장하기</button>
+            </div>
+            <div id="login-msg" style="color: #ef4444; margin-top: 10px; font-size: 0.9rem;"></div>
         </div>
 
-        <!-- 2. 게임 화면 -->
-        <div id="game-screen">
-            <div class="subtitle" id="welcome-msg"></div>
+        <!-- 2. 방 대기 화면 (호스트용) -->
+        <div id="waiting-screen" class="screen">
+            <h1>대기실</h1>
+            <div class="subtitle">친구에게 아래 코드를 공유하세요.</div>
+            <div class="loader"></div>
+            <div class="room-code-box" id="display-room-code">로딩중...</div>
+            <div style="color: var(--text-muted); font-size: 0.9rem;">상대방의 접속을 기다리고 있습니다...</div>
+        </div>
+
+        <!-- 3. 게임 화면 -->
+        <div id="game-screen" class="screen">
+            <div class="status-header">
+                <div class="player-info" id="player-names">나 vs 상대방</div>
+                <div class="turn-badge" id="turn-indicator">상태 확인 중</div>
+            </div>
             
             <div class="word-display" id="current-word">끝말잇기</div>
             
             <div style="display: flex; gap: 10px;">
-                <input type="text" id="word-input" placeholder="다음 단어를 입력하세요" onkeypress="if(event.key === 'Enter') submitWord()" style="margin-bottom: 0;">
-                <button class="btn-primary" onclick="submitWord()" style="width: 100px;">입력</button>
+                <input type="text" id="word-input" placeholder="단어 입력..." onkeypress="if(event.key === 'Enter') attemptSubmitWord()">
+                <button class="btn btn-primary" id="submit-btn" onclick="attemptSubmitWord()" style="width: 100px; margin: 0;">전송</button>
             </div>
             
             <div id="message"></div>
 
-            <div class="history-box" id="history-box">
-                <!-- 기록 태그들이 추가됨 -->
-            </div>
+            <div class="history-box" id="history-box"></div>
         </div>
 
     </div>
 
     <script>
-        let currentWord = "끝말잇기";
-        let usedWords = ["끝말잇기"];
+        // --- 게임 및 통신 상태 변수 ---
+        let peer = null;
+        let conn = null;
+        
+        let myName = "";
+        let opponentName = "상대방";
+        let isHost = false;
+        let isMyTurn = false;
         let isAdmin = false;
 
-        // 자주 쓰이는 한국어 더미 음절 (치트키 단어 생성용)
+        let currentWord = "끝말잇기";
+        let usedWords = ["끝말잇기"];
+
+        const ROOM_PREFIX = "KOREANWORD-"; // PeerJS ID 충돌 방지용 접두사
+
+        // 자주 쓰이는 한국어 더미 음절 (치트키 생성용)
         const korSyllables = ['가','나','다','라','마','바','사','아','자','차','카','타','파','하', '기','니','디','리','미','비','시','이','지','치','키','티','피','히', '구','누','두','루','무','부','수','우','주','추','쿠','투','푸','후', '고','노','도','로','모','보','소','오','조','초','코','토','포','호', '력','산','강','바','다','별','달','해','빛','꽃','풀','새','돌','물','불'];
 
-        function login() {
-            const username = document.getElementById('username').value.trim();
-            if (!username) {
-                alert("닉네임을 입력해주세요!");
+        // --- 화면 전환 함수 ---
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        // --- 초기화 및 로비 로직 ---
+        function checkUsername() {
+            const name = document.getElementById('username').value.trim();
+            if (!name) {
+                document.getElementById('login-msg').innerText = "닉네임을 먼저 입력해주세요.";
+                return null;
+            }
+            document.getElementById('login-msg').innerText = "";
+            
+            // 어드민 감지
+            if (name === "Endloki17") {
+                isAdmin = true;
+                document.getElementById('admin-sidebar').style.display = 'flex';
+            }
+            return name;
+        }
+
+        function showJoinMenu() {
+            if (checkUsername()) {
+                document.getElementById('join-menu').style.display = 'block';
+                document.getElementById('room-code-input').focus();
+            }
+        }
+
+        // --- PeerJS 통신: 호스트(방 만들기) ---
+        function hostGame() {
+            myName = checkUsername();
+            if (!myName) return;
+
+            isHost = true;
+            showScreen('waiting-screen');
+
+            // 5자리 랜덤 방 코드 생성
+            const roomCode = Math.random().toString(36).substring(2, 7).toUpperCase();
+            const fullPeerId = ROOM_PREFIX + roomCode;
+
+            peer = new Peer(fullPeerId);
+
+            peer.on('open', (id) => {
+                document.getElementById('display-room-code').innerText = roomCode;
+            });
+
+            // 누군가 접속했을 때
+            peer.on('connection', (connection) => {
+                conn = connection;
+                setupConnectionEventHandlers();
+                
+                // 호스트가 먼저 시작
+                isMyTurn = true;
+            });
+
+            peer.on('error', (err) => {
+                alert("방 생성 오류: " + err.type);
+                showScreen('login-screen');
+            });
+        }
+
+        // --- PeerJS 통신: 게스트(방 참가하기) ---
+        function joinGame() {
+            myName = checkUsername();
+            if (!myName) return;
+
+            const inputCode = document.getElementById('room-code-input').value.trim().toUpperCase();
+            if (!inputCode) {
+                document.getElementById('login-msg').innerText = "방 코드를 입력해주세요.";
                 return;
             }
 
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('game-screen').style.display = 'block';
-            document.getElementById('welcome-msg').innerText = `${username}님, 환영합니다!`;
+            const targetPeerId = ROOM_PREFIX + inputCode;
+            isHost = false;
             
-            // 어드민 체크 (Endloki17)
-            if (username === "Endloki17") {
-                isAdmin = true;
-                document.getElementById('admin-sidebar').style.display = 'flex';
-                updateCheatPanel();
-            }
+            // 게스트는 자동 ID 생성
+            peer = new Peer();
 
-            updateUI();
-            document.getElementById('word-input').focus();
+            peer.on('open', (id) => {
+                document.getElementById('login-msg').innerText = "연결 중...";
+                conn = peer.connect(targetPeerId);
+                
+                conn.on('open', () => {
+                    setupConnectionEventHandlers();
+                    // 내 이름을 호스트에게 전달
+                    conn.send({ type: 'join', name: myName });
+                    isMyTurn = false; // 게스트는 호스트의 턴을 기다림
+                });
+
+                conn.on('error', (err) => {
+                    alert("연결 실패! 코드를 확인해주세요.");
+                });
+            });
+
+            peer.on('error', (err) => {
+                document.getElementById('login-msg').innerText = "연결 오류. 코드가 맞는지 확인하세요.";
+            });
         }
 
-        function submitWord(forcedWord = null) {
+        // --- 데이터 수신 이벤트 핸들러 ---
+        function setupConnectionEventHandlers() {
+            conn.on('data', (data) => {
+                // 1. 게스트가 처음 접속했을 때 (호스트 수신)
+                if (data.type === 'join') {
+                    opponentName = data.name;
+                    // 호스트가 게스트에게 초기 상태와 자기 이름 전달
+                    conn.send({ 
+                        type: 'start', 
+                        name: myName, 
+                        word: currentWord, 
+                        used: usedWords 
+                    });
+                    initGameUI();
+                }
+                
+                // 2. 호스트가 게임 시작 신호를 보냈을 때 (게스트 수신)
+                else if (data.type === 'start') {
+                    opponentName = data.name;
+                    currentWord = data.word;
+                    usedWords = data.used;
+                    initGameUI();
+                }
+                
+                // 3. 상대방이 단어를 입력했을 때 (양방향)
+                else if (data.type === 'word') {
+                    applyNewWord(data.word, false);
+                }
+            });
+
+            conn.on('close', () => {
+                alert("상대방과 연결이 끊어졌습니다.");
+                location.reload();
+            });
+        }
+
+        // --- 게임 로직 ---
+        function initGameUI() {
+            showScreen('game-screen');
+            document.getElementById('player-names').innerText = `${myName} (나) VS ${opponentName}`;
+            updateBoardUI();
+        }
+
+        // 사용자가 전송 버튼 누르거나 엔터 쳤을 때
+        function attemptSubmitWord(forcedWord = null) {
+            if (!isMyTurn) return;
+
             const inputField = document.getElementById('word-input');
             const newWord = forcedWord ? forcedWord : inputField.value.trim();
             const msgBox = document.getElementById('message');
 
-            // 1. 글자 수 체크
+            // 유효성 검사
             if (newWord.length < 2) {
                 msgBox.innerText = "2글자 이상 입력해주세요.";
                 return;
             }
 
-            // 2. 끝말잇기 룰 체크 (이전 단어의 끝 글자와 현재 단어의 첫 글자)
             const lastChar = currentWord.charAt(currentWord.length - 1);
             const firstChar = newWord.charAt(0);
 
-            // (두음법칙 등 복잡한 룰은 제외하고 직관적인 글자 일치만 확인)
             if (lastChar !== firstChar) {
                 msgBox.innerText = `'${lastChar}'(으)로 시작하는 단어를 입력해야 합니다!`;
                 return;
             }
 
-            // 3. 중복 단어 체크
             if (usedWords.includes(newWord)) {
                 msgBox.innerText = "이미 사용한 단어입니다!";
                 return;
             }
 
-            // 통과
+            // 내가 단어 성공적으로 입력함
             msgBox.innerText = "";
-            currentWord = newWord;
-            usedWords.push(currentWord);
-            inputField.value = "";
-            
-            updateUI();
+            applyNewWord(newWord, true);
 
-            if (isAdmin) {
-                updateCheatPanel();
-            }
+            // 상대방에게 데이터 전송
+            conn.send({ type: 'word', word: newWord });
         }
 
-        function updateUI() {
-            // 현재 단어 업데이트
-            document.getElementById('current-word').innerText = currentWord;
+        // 단어 적용 및 턴 교체 로직
+        function applyNewWord(word, isItMyWord) {
+            currentWord = word;
+            usedWords.push(currentWord);
+            
+            // 턴 교체
+            isMyTurn = !isItMyWord;
+            
+            updateBoardUI();
+        }
 
-            // 히스토리 업데이트
+        // 화면 랜더링 업데이트
+        function updateBoardUI() {
+            const inputField = document.getElementById('word-input');
+            const submitBtn = document.getElementById('submit-btn');
+            const turnIndicator = document.getElementById('turn-indicator');
+            const msgBox = document.getElementById('message');
+
+            // 단어 및 입력창 리셋
+            document.getElementById('current-word').innerText = currentWord;
+            inputField.value = "";
+            msgBox.innerText = "";
+
+            // 턴 표시 갱신
+            if (isMyTurn) {
+                turnIndicator.innerText = "나의 차례!";
+                turnIndicator.className = "turn-badge turn-mine";
+                inputField.disabled = false;
+                submitBtn.disabled = false;
+                inputField.focus();
+            } else {
+                turnIndicator.innerText = "상대방 대기 중...";
+                turnIndicator.className = "turn-badge turn-opponent";
+                inputField.disabled = true;
+                submitBtn.disabled = true;
+            }
+
+            // 히스토리 갱신
             const historyBox = document.getElementById('history-box');
             historyBox.innerHTML = "";
-            usedWords.forEach(word => {
+            usedWords.forEach((word, index) => {
                 const span = document.createElement('span');
                 span.className = 'history-tag';
+                // 마지막에 입력한 단어 강조
+                if (index === usedWords.length - 1) {
+                    span.style.background = 'rgba(59, 130, 246, 0.2)';
+                    span.style.color = '#60a5fa';
+                    span.style.border = '1px solid rgba(59, 130, 246, 0.5)';
+                }
                 span.innerText = word;
                 historyBox.appendChild(span);
             });
-            // 스크롤 맨 아래로
             historyBox.scrollTop = historyBox.scrollHeight;
+
+            // 어드민 치트 패널 갱신
+            if (isAdmin) {
+                generateCheatWords();
+            }
         }
 
-        // 관리자 전용 무한 단어 생성기
-        function updateCheatPanel() {
+        // 👑 어드민 치트: 단어 목록 자동 생성기
+        function generateCheatWords() {
             const cheatList = document.getElementById('cheat-word-list');
-            cheatList.innerHTML = ""; // 초기화
+            cheatList.innerHTML = ""; // 비우기
             
             const targetChar = currentWord.charAt(currentWord.length - 1);
 
-            // 100만개 DB 연출을 위해 리스트에 50개 정도의 필터링된 "필승 단어"를 즉시 생성
-            for (let i = 0; i < 50; i++) {
-                // 랜덤 글자 조합으로 단어 생성 (실제 사전 단어처럼 보이게 연출)
-                const randomLen = Math.floor(Math.random() * 2) + 1; // 2~3글자
+            // 약 40개의 무작위 필승 단어 생성
+            for (let i = 0; i < 40; i++) {
+                const randomLen = Math.floor(Math.random() * 2) + 1; // 뒤에 1~2글자 추가
                 let genWord = targetChar;
                 for(let j = 0; j < randomLen; j++) {
                     genWord += korSyllables[Math.floor(Math.random() * korSyllables.length)];
                 }
 
-                // 버튼 생성
                 const btn = document.createElement('button');
                 btn.className = 'cheat-word-btn';
                 btn.innerText = genWord;
+                // 내 턴이 아니면 클릭 막기 시각화
+                if (!isMyTurn) {
+                    btn.style.opacity = '0.3';
+                    btn.style.cursor = 'not-allowed';
+                }
+                
                 btn.onclick = () => {
-                    submitWord(genWord);
+                    if(isMyTurn) attemptSubmitWord(genWord);
                 };
                 cheatList.appendChild(btn);
             }
         }
     </script>
 </body>
-      </html>
+    </html>
