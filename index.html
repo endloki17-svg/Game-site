@@ -1,2736 +1,375 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-<title>Sudoku Arena</title>
-
-<!-- PeerJS -->
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-
-<style>
-*{
-    box-sizing:border-box;
-    -webkit-tap-highlight-color:transparent;
-}
-
-:root{
-    --bg:#070b16;
-    --panel:#101729;
-    --panel2:#151d31;
-    --line:#27324c;
-    --text:#f5f7ff;
-    --muted:#8d98b5;
-    --blue:#5b8cff;
-    --blue2:#7a5cff;
-    --green:#32d583;
-    --red:#ff5c73;
-    --yellow:#ffc857;
-    --cell:#121a2c;
-    --cell2:#18223a;
-}
-
-body{
-    margin:0;
-    min-height:100vh;
-    background:
-        radial-gradient(circle at 20% 10%,#1c2b58 0,transparent 30%),
-        radial-gradient(circle at 80% 90%,#211b55 0,transparent 30%),
-        var(--bg);
-    color:var(--text);
-    font-family:
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Roboto,
-        Arial,
-        sans-serif;
-    overflow-x:hidden;
-}
-
-button,
-input{
-    font:inherit;
-}
-
-button{
-    border:0;
-    cursor:pointer;
-    color:white;
-}
-
-.app{
-    width:min(1180px,100%);
-    margin:auto;
-    padding:18px;
-}
-
-/* ================= HEADER ================= */
-
-.header{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    margin-bottom:18px;
-}
-
-.logo{
-    display:flex;
-    align-items:center;
-    gap:12px;
-}
-
-.logoIcon{
-    width:48px;
-    height:48px;
-    border-radius:15px;
-    display:grid;
-    place-items:center;
-    font-size:25px;
-    background:
-        linear-gradient(135deg,#638cff,#795cff);
-    box-shadow:
-        0 10px 30px #536cff35,
-        inset 0 1px #ffffff44;
-}
-
-.logoText h1{
-    margin:0;
-    font-size:21px;
-}
-
-.logoText p{
-    margin:3px 0 0;
-    color:var(--muted);
-    font-size:12px;
-}
-
-.status{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    padding:9px 13px;
-    background:#10182a;
-    border:1px solid var(--line);
-    border-radius:999px;
-    font-size:12px;
-    color:var(--muted);
-}
-
-.statusDot{
-    width:8px;
-    height:8px;
-    background:#6b748b;
-    border-radius:50%;
-}
-
-.statusDot.online{
-    background:var(--green);
-    box-shadow:0 0 12px var(--green);
-}
-
-/* ================= SCREENS ================= */
-
-.screen{
-    display:none;
-}
-
-.screen.active{
-    display:block;
-}
-
-/* ================= HOME ================= */
-
-.hero{
-    text-align:center;
-    padding:45px 15px 30px;
-}
-
-.heroBadge{
-    display:inline-flex;
-    padding:7px 12px;
-    border:1px solid #516eff55;
-    background:#536eff12;
-    border-radius:999px;
-    color:#9fb2ff;
-    font-size:12px;
-    margin-bottom:15px;
-}
-
-.hero h2{
-    margin:0;
-    font-size:clamp(34px,7vw,68px);
-    line-height:1;
-    letter-spacing:-3px;
-}
-
-.gradientText{
-    background:linear-gradient(90deg,#72a0ff,#a47bff,#62e6b0);
-    -webkit-background-clip:text;
-    color:transparent;
-}
-
-.hero p{
-    max-width:550px;
-    margin:18px auto 0;
-    color:var(--muted);
-    line-height:1.7;
-}
-
-.menu{
-    width:min(500px,100%);
-    margin:20px auto;
-    display:grid;
-    gap:12px;
-}
-
-.primaryBtn{
-    min-height:58px;
-    border-radius:17px;
-    background:linear-gradient(135deg,var(--blue),var(--blue2));
-    font-weight:800;
-    font-size:16px;
-    box-shadow:0 15px 35px #5b6fff25;
-    transition:.15s;
-}
-
-.primaryBtn:active{
-    transform:scale(.97);
-}
-
-.secondaryBtn{
-    min-height:54px;
-    border-radius:16px;
-    background:#131c30;
-    border:1px solid var(--line);
-    font-weight:700;
-}
-
-.homeFeatures{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:10px;
-    max-width:700px;
-    margin:35px auto 0;
-}
-
-.feature{
-    padding:17px 10px;
-    background:#0f1728cc;
-    border:1px solid #202c47;
-    border-radius:17px;
-}
-
-.featureIcon{
-    font-size:22px;
-}
-
-.feature strong{
-    display:block;
-    margin-top:8px;
-    font-size:13px;
-}
-
-.feature span{
-    display:block;
-    color:var(--muted);
-    font-size:11px;
-    margin-top:4px;
-}
-
-/* ================= CARD ================= */
-
-.card{
-    background:
-        linear-gradient(145deg,#121b2fef,#0e1628ef);
-    border:1px solid var(--line);
-    border-radius:22px;
-    padding:20px;
-    box-shadow:0 25px 70px #00000030;
-}
-
-.cardTitle{
-    margin:0 0 6px;
-    font-size:22px;
-}
-
-.cardDesc{
-    color:var(--muted);
-    margin:0 0 20px;
-    font-size:13px;
-}
-
-/* ================= LOBBY ================= */
-
-.lobbyGrid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:15px;
-}
-
-.input{
-    width:100%;
-    height:52px;
-    padding:0 15px;
-    color:white;
-    background:#0b1221;
-    border:1px solid #263451;
-    border-radius:14px;
-    outline:none;
-}
-
-.input:focus{
-    border-color:#648aff;
-    box-shadow:0 0 0 3px #648aff15;
-}
-
-.roomCode{
-    font-size:30px;
-    font-weight:900;
-    letter-spacing:7px;
-    text-align:center;
-    padding:18px;
-    background:#0a1020;
-    border:1px dashed #40517b;
-    border-radius:17px;
-    margin:15px 0;
-}
-
-.btnRow{
-    display:flex;
-    gap:9px;
-}
-
-.btnRow>*{
-    flex:1;
-}
-
-.smallBtn{
-    height:48px;
-    background:#19243b;
-    border:1px solid #2b3957;
-    border-radius:13px;
-    font-weight:700;
-}
-
-.backBtn{
-    background:transparent;
-    color:var(--muted);
-    padding:10px 0;
-}
-
-/* ================= GAME ================= */
-
-.gameTop{
-    display:grid;
-    grid-template-columns:1fr auto 1fr;
-    gap:12px;
-    align-items:center;
-    margin-bottom:14px;
-}
-
-.playerBox{
-    min-width:0;
-    padding:12px 14px;
-    border-radius:16px;
-    background:#111a2d;
-    border:1px solid var(--line);
-}
-
-.playerName{
-    font-weight:800;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-}
-
-.playerSub{
-    color:var(--muted);
-    font-size:11px;
-    margin-top:4px;
-}
-
-.progress{
-    height:6px;
-    margin-top:8px;
-    border-radius:99px;
-    overflow:hidden;
-    background:#242e43;
-}
-
-.progressFill{
-    width:0%;
-    height:100%;
-    background:linear-gradient(90deg,var(--blue),#8f6cff);
-    transition:.3s;
-}
-
-.timer{
-    text-align:center;
-}
-
-.timerLabel{
-    color:var(--muted);
-    font-size:10px;
-}
-
-.timerValue{
-    font-size:24px;
-    font-weight:900;
-    font-variant-numeric:tabular-nums;
-}
-
-.gameLayout{
-    display:grid;
-    grid-template-columns:minmax(0,650px) 280px;
-    justify-content:center;
-    gap:18px;
-}
-
-.boardCard{
-    padding:13px;
-    background:#0b1220;
-    border:1px solid var(--line);
-    border-radius:22px;
-}
-
-.board{
-    width:100%;
-    max-width:650px;
-    margin:auto;
-    aspect-ratio:1;
-    display:grid;
-    grid-template-columns:repeat(9,1fr);
-    grid-template-rows:repeat(9,1fr);
-    overflow:hidden;
-    border:3px solid #6376a3;
-    border-radius:10px;
-    background:#6376a3;
-    gap:1px;
-}
-
-.cell{
-    position:relative;
-    min-width:0;
-    min-height:0;
-    display:grid;
-    place-items:center;
-    background:var(--cell);
-    color:#eef2ff;
-    font-size:clamp(17px,4vw,29px);
-    font-weight:700;
-    user-select:none;
-    transition:.1s;
-}
-
-.cell:nth-child(3n){
-    border-right:2px solid #6376a3;
-}
-
-.cell:nth-child(n+19):nth-child(-n+27),
-.cell:nth-child(n+46):nth-child(-n+54){
-    border-bottom:2px solid #6376a3;
-}
-
-.cell.given{
-    color:#dce5ff;
-    background:#172139;
-}
-
-.cell.selected{
-    background:#2a427a;
-    box-shadow:inset 0 0 0 2px #6d91ff;
-}
-
-.cell.related{
-    background:#182947;
-}
-
-.cell.sameNumber{
-    background:#243b69;
-}
-
-.cell.error{
-    color:#ff7182;
-    background:#401f2c;
-    animation:shake .18s;
-}
-
-@keyframes shake{
-    25%{transform:translateX(-3px)}
-    50%{transform:translateX(3px)}
-    75%{transform:translateX(-2px)}
-}
-
-.notes{
-    position:absolute;
-    inset:3px;
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    grid-template-rows:repeat(3,1fr);
-    pointer-events:none;
-}
-
-.note{
-    display:grid;
-    place-items:center;
-    color:#7384ab;
-    font-size:clamp(7px,1.8vw,12px);
-    font-weight:600;
-}
-
-/* ================= SIDE ================= */
-
-.side{
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-}
-
-.sideCard{
-    padding:15px;
-    background:#111a2d;
-    border:1px solid var(--line);
-    border-radius:18px;
-}
-
-.sideTitle{
-    font-weight:800;
-    margin-bottom:11px;
-}
-
-.mistakes{
-    display:flex;
-    gap:5px;
-}
-
-.life{
-    width:10px;
-    height:10px;
-    border-radius:50%;
-    background:var(--red);
-    box-shadow:0 0 8px #ff526433;
-}
-
-.life.off{
-    background:#30394e;
-    box-shadow:none;
-}
-
-.actionGrid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:8px;
-}
-
-.action{
-    min-height:45px;
-    background:#18233a;
-    border:1px solid #2a3855;
-    border-radius:12px;
-    font-size:12px;
-    font-weight:700;
-}
-
-.action:active{
-    transform:scale(.96);
-}
-
-.danger{
-    color:#ff7888;
-}
-
-/* ================= NUMPAD ================= */
-
-.numpad{
-    display:grid;
-    grid-template-columns:repeat(5,1fr);
-    gap:8px;
-    margin-top:12px;
-}
-
-.numBtn{
-    min-height:50px;
-    border-radius:13px;
-    background:#18233a;
-    border:1px solid #2a3855;
-    font-size:17px;
-    font-weight:800;
-}
-
-.numBtn:active{
-    background:#334d82;
-    transform:scale(.95);
-}
-
-.numBtn.erase{
-    color:#ff7c8c;
-}
-
-/* ================= TOAST ================= */
-
-.toast{
-    position:fixed;
-    left:50%;
-    bottom:25px;
-    transform:translate(-50%,20px);
-    opacity:0;
-    pointer-events:none;
-    z-index:100;
-    padding:12px 18px;
-    border-radius:999px;
-    background:#202b44;
-    border:1px solid #3a4a6d;
-    box-shadow:0 15px 40px #0008;
-    font-size:13px;
-    transition:.25s;
-}
-
-.toast.show{
-    opacity:1;
-    transform:translate(-50%,0);
-}
-
-/* ================= MODAL ================= */
-
-.modal{
-    position:fixed;
-    inset:0;
-    z-index:200;
-    display:none;
-    place-items:center;
-    padding:20px;
-    background:#030612bb;
-    backdrop-filter:blur(10px);
-}
-
-.modal.show{
-    display:grid;
-}
-
-.modalBox{
-    width:min(440px,100%);
-    padding:28px;
-    border-radius:25px;
-    background:#111a2d;
-    border:1px solid #33425f;
-    box-shadow:0 30px 100px #0009;
-    text-align:center;
-}
-
-.resultIcon{
-    font-size:60px;
-    margin-bottom:10px;
-}
-
-.modalBox h2{
-    margin:0;
-    font-size:28px;
-}
-
-.modalBox p{
-    color:var(--muted);
-    line-height:1.6;
-}
-
-.hidden{
-    display:none!important;
-}
-
-/* ================= RESPONSIVE ================= */
-
-@media(max-width:850px){
-    .gameLayout{
-        grid-template-columns:1fr;
-    }
-
-    .side{
-        display:grid;
-        grid-template-columns:1fr 1fr;
-    }
-
-    .sideCard:last-child{
-        grid-column:1/-1;
-    }
-}
-
-@media(max-width:650px){
-    .app{
-        padding:11px;
-    }
-
-    .header{
-        margin-bottom:10px;
-    }
-
-    .logoIcon{
-        width:42px;
-        height:42px;
-        border-radius:13px;
-    }
-
-    .logoText h1{
-        font-size:18px;
-    }
-
-    .status{
-        font-size:10px;
-        padding:8px 10px;
-    }
-
-    .hero{
-        padding:35px 8px 20px;
-    }
-
-    .hero h2{
-        font-size:42px;
-    }
-
-    .homeFeatures{
-        grid-template-columns:1fr;
-    }
-
-    .lobbyGrid{
-        grid-template-columns:1fr;
-    }
-
-    .gameTop{
-        grid-template-columns:1fr auto;
-    }
-
-    .timer{
-        grid-column:1/-1;
-        grid-row:1;
-    }
-
-    .playerBox{
-        grid-row:2;
-    }
-
-    .gameTop .playerBox:last-child{
-        text-align:right;
-    }
-
-    .boardCard{
-        padding:7px;
-        border-radius:16px;
-    }
-
-    .side{
-        grid-template-columns:1fr;
-    }
-
-    .sideCard:last-child{
-        grid-column:auto;
-    }
-
-    .cell{
-        font-size:clamp(15px,5vw,25px);
-    }
-
-    .numpad{
-        grid-template-columns:repeat(5,1fr);
-    }
-
-    .numBtn{
-        min-height:47px;
-    }
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>초고퀄리티 끝말잇기</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;500;700&display=swap');
+
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --admin-color: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 100%);
+        }
+
+        /* 어드민 사이드바 */
+        #admin-sidebar {
+            width: 350px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(239, 68, 68, 0.3);
+            display: none;
+            flex-direction: column;
+            padding: 20px;
+            box-shadow: 5px 0 20px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        #admin-sidebar h2 {
+            color: var(--admin-color);
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #admin-sidebar h2::before {
+            content: "👑";
+        }
+
+        .db-status {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+
+        #cheat-word-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* 스크롤바 커스텀 */
+        #cheat-word-list::-webkit-scrollbar { width: 6px; }
+        #cheat-word-list::-webkit-scrollbar-thumb { background: var(--admin-color); border-radius: 3px; }
+
+        .cheat-word-btn {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--text-main);
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            font-size: 1rem;
+        }
+
+        .cheat-word-btn:hover {
+            background: rgba(239, 68, 68, 0.4);
+            transform: translateX(5px);
+        }
+
+        /* 메인 컨텐츠 영역 */
+        #main-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* 로그인 화면 */
+        #login-screen, #game-screen {
+            background: var(--panel-bg);
+            backdrop-filter: blur(15px);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 30px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.2);
+            color: white;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            outline: none;
+            transition: border 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary);
+        }
+
+        button.btn-primary {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: var(--primary);
+            color: white;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button.btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        /* 게임 화면 전용 */
+        #game-screen {
+            display: none;
+        }
+
+        .word-display {
+            font-size: 4rem;
+            font-weight: 700;
+            margin: 20px 0;
+            letter-spacing: 5px;
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+
+        .history-box {
+            margin-top: 30px;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            text-align: left;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .history-tag {
+            background: rgba(255,255,255,0.1);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .history-tag:last-child {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.5);
+        }
+
+        #message {
+            margin-top: 15px;
+            height: 20px;
+            color: #ef4444;
+            font-weight: 500;
+        }
+
+    </style>
 </head>
-
 <body>
 
-<div class="app">
-
-<header class="header">
-    <div class="logo">
-        <div class="logoIcon">🧩</div>
-        <div class="logoText">
-            <h1>Sudoku Arena</h1>
-            <p>Think faster. Solve smarter.</p>
+    <!-- 어드민(Endloki17) 전용 사이드바 -->
+    <div id="admin-sidebar">
+        <h2>GOD MODE 활성화</h2>
+        <div class="db-status">연동된 단어 DB: 1,000,000개 로드 완료<br>클릭하여 즉시 입력하세요.</div>
+        <div id="cheat-word-list">
+            <!-- 치트 단어들이 여기에 동적으로 생성됨 -->
         </div>
     </div>
 
-    <div class="status">
-        <span id="statusDot" class="statusDot"></span>
-        <span id="statusText">오프라인</span>
-    </div>
-</header>
-
-
-<!-- ================= HOME ================= -->
-
-<section id="homeScreen" class="screen active">
-
-    <div class="hero">
-        <div class="heroBadge">⚡ REAL-TIME SUDOKU BATTLE</div>
-
-        <h2>
-            SUDOKU<br>
-            <span class="gradientText">ARENA</span>
-        </h2>
-
-        <p>
-            혼자 퍼즐을 풀거나 친구와 실시간으로 경쟁하세요.
-            누가 먼저 9×9 스도쿠를 완성할까요?
-        </p>
-
-        <div class="menu">
-            <button class="primaryBtn" onclick="startSolo()">
-                🎮 혼자 플레이
-            </button>
-
-            <button class="secondaryBtn" onclick="showLobby()">
-                ⚔️ 온라인 대결
-            </button>
+    <!-- 메인 컨텐츠 영역 -->
+    <div id="main-wrapper">
+        
+        <!-- 1. 로그인 화면 -->
+        <div id="login-screen">
+            <h1>끝말잇기</h1>
+            <div class="subtitle">궁극의 두뇌 게임에 오신 것을 환영합니다.</div>
+            <input type="text" id="username" placeholder="닉네임을 입력하세요" onkeypress="if(event.key === 'Enter') login()">
+            <button class="btn-primary" onclick="login()">게임 시작</button>
         </div>
 
-        <div class="homeFeatures">
-            <div class="feature">
-                <div class="featureIcon">⚡</div>
-                <strong>실시간 대결</strong>
-                <span>Peer-to-Peer 연결</span>
+        <!-- 2. 게임 화면 -->
+        <div id="game-screen">
+            <div class="subtitle" id="welcome-msg"></div>
+            
+            <div class="word-display" id="current-word">끝말잇기</div>
+            
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="word-input" placeholder="다음 단어를 입력하세요" onkeypress="if(event.key === 'Enter') submitWord()" style="margin-bottom: 0;">
+                <button class="btn-primary" onclick="submitWord()" style="width: 100px;">입력</button>
             </div>
+            
+            <div id="message"></div>
 
-            <div class="feature">
-                <div class="featureIcon">🧠</div>
-                <strong>자동 퍼즐</strong>
-                <span>매 게임 새로운 퍼즐</span>
+            <div class="history-box" id="history-box">
+                <!-- 기록 태그들이 추가됨 -->
             </div>
-
-            <div class="feature">
-                <div class="featureIcon">📱</div>
-                <strong>모바일 최적화</strong>
-                <span>터치 숫자 키패드</span>
-            </div>
-        </div>
-    </div>
-
-</section>
-
-
-<!-- ================= LOBBY ================= -->
-
-<section id="lobbyScreen" class="screen">
-
-    <div class="card">
-
-        <button class="backBtn" onclick="goHome()">← 돌아가기</button>
-
-        <h2 class="cardTitle">온라인 대결</h2>
-        <p class="cardDesc">
-            방을 만들거나 친구가 만든 방에 참가하세요.
-        </p>
-
-        <div class="lobbyGrid">
-
-            <div class="card">
-
-                <h3>🚀 방 만들기</h3>
-
-                <p class="cardDesc">
-                    친구에게 방 코드를 알려주세요.
-                </p>
-
-                <input
-                    id="hostName"
-                    class="input"
-                    maxlength="15"
-                    placeholder="내 닉네임"
-                    value="Player"
-                >
-
-                <button
-                    class="primaryBtn"
-                    style="width:100%;margin-top:10px"
-                    onclick="createRoom()">
-                    방 만들기
-                </button>
-
-                <div id="hostRoomArea" class="hidden">
-
-                    <div class="roomCode" id="hostRoomCode">
-                        ----
-                    </div>
-
-                    <div class="btnRow">
-                        <button
-                            class="smallBtn"
-                            onclick="copyRoomCode()">
-                            📋 코드 복사
-                        </button>
-
-                        <button
-                            class="smallBtn"
-                            onclick="cancelRoom()">
-                            취소
-                        </button>
-                    </div>
-
-                    <p
-                        id="waitingText"
-                        style="
-                        text-align:center;
-                        color:#8d98b5;
-                        font-size:12px;
-                        margin-top:15px">
-                        상대방을 기다리는 중...
-                    </p>
-
-                </div>
-
-            </div>
-
-
-            <div class="card">
-
-                <h3>🎯 방 참가</h3>
-
-                <p class="cardDesc">
-                    친구에게 받은 4자리 코드를 입력하세요.
-                </p>
-
-                <input
-                    id="joinName"
-                    class="input"
-                    maxlength="15"
-                    placeholder="내 닉네임"
-                    value="Player"
-                >
-
-                <input
-                    id="joinCode"
-                    class="input"
-                    maxlength="4"
-                    inputmode="numeric"
-                    placeholder="방 코드"
-                    style="margin-top:10px;text-align:center;letter-spacing:5px;font-weight:900"
-                >
-
-                <button
-                    class="primaryBtn"
-                    style="width:100%;margin-top:10px"
-                    onclick="joinRoom()">
-                    방 참가
-                </button>
-
-            </div>
-
-        </div>
-
-        <div style="
-            margin-top:15px;
-            padding:13px;
-            border-radius:13px;
-            background:#0c1424;
-            color:#7886a4;
-            font-size:11px;
-            line-height:1.6">
-            💡 온라인 대결은 PeerJS를 사용합니다.
-            브라우저에서 인터넷 연결이 필요하며 HTTPS 환경에서
-            사용하는 것을 권장합니다.
         </div>
 
     </div>
 
-</section>
-
-
-<!-- ================= GAME ================= -->
-
-<section id="gameScreen" class="screen">
-
-    <div class="gameTop">
-
-        <div class="playerBox">
-
-            <div class="playerName" id="myName">
-                나
-            </div>
-
-            <div class="playerSub">
-                <span id="myProgressText">0 / 81</span>
-            </div>
-
-            <div class="progress">
-                <div
-                    id="myProgress"
-                    class="progressFill">
-                </div>
-            </div>
-
-        </div>
-
-
-        <div class="timer">
-
-            <div class="timerLabel">
-                TIME
-            </div>
-
-            <div
-                class="timerValue"
-                id="timer">
-                00:00
-            </div>
-
-        </div>
-
-
-        <div class="playerBox">
-
-            <div
-                class="playerName"
-                id="opponentName">
-                상대방
-            </div>
-
-            <div class="playerSub">
-                <span id="opponentProgressText">
-                    대기 중
-                </span>
-            </div>
-
-            <div class="progress">
-                <div
-                    id="opponentProgress"
-                    class="progressFill">
-                </div>
-            </div>
-
-        </div>
-
-    </div>
-
-
-    <div class="gameLayout">
-
-        <div>
-
-            <div class="boardCard">
-
-                <div id="board" class="board"></div>
-
-            </div>
-
-            <div id="numpad" class="numpad">
-
-                <button class="numBtn" onclick="inputNumber(1)">1</button>
-                <button class="numBtn" onclick="inputNumber(2)">2</button>
-                <button class="numBtn" onclick="inputNumber(3)">3</button>
-                <button class="numBtn" onclick="inputNumber(4)">4</button>
-                <button class="numBtn" onclick="inputNumber(5)">5</button>
-
-                <button class="numBtn" onclick="inputNumber(6)">6</button>
-                <button class="numBtn" onclick="inputNumber(7)">7</button>
-                <button class="numBtn" onclick="inputNumber(8)">8</button>
-                <button class="numBtn" onclick="inputNumber(9)">9</button>
-
-                <button
-                    class="numBtn erase"
-                    onclick="eraseCell()">
-                    ⌫
-                </button>
-
-            </div>
-
-        </div>
-
-
-        <aside class="side">
-
-            <div class="sideCard">
-
-                <div class="sideTitle">
-                    ❤️ 실수
-                </div>
-
-                <div class="mistakes">
-
-                    <span class="life" id="life1"></span>
-                    <span class="life" id="life2"></span>
-                    <span class="life" id="life3"></span>
-                    <span class="life" id="life4"></span>
-                    <span class="life" id="life5"></span>
-
-                </div>
-
-            </div>
-
-
-            <div class="sideCard">
-
-                <div class="sideTitle">
-                    🛠 도구
-                </div>
-
-                <div class="actionGrid">
-
-                    <button
-                        class="action"
-                        onclick="toggleNotes()">
-                        📝 메모
-                    </button>
-
-                    <button
-                        class="action"
-                        onclick="useHint()">
-                        💡 힌트
-                    </button>
-
-                    <button
-                        class="action"
-                        onclick="clearNotes()">
-                        🧹 메모 삭제
-                    </button>
-
-                    <button
-                        class="action danger"
-                        onclick="quitGame()">
-                        🚪 나가기
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            <div class="sideCard">
-
-                <div class="sideTitle">
-                    📊 게임 정보
-                </div>
-
-                <div style="
-                    display:grid;
-                    grid-template-columns:1fr 1fr;
-                    gap:8px">
-
-                    <div>
-                        <div style="color:#7785a4;font-size:10px">
-                            난이도
-                        </div>
-                        <strong id="difficulty">
-                            HARD
-                        </strong>
-                    </div>
-
-                    <div>
-                        <div style="color:#7785a4;font-size:10px">
-                            메모
-                        </div>
-                        <strong id="noteStatus">
-                            OFF
-                        </strong>
-                    </div>
-
-                </div>
-
-            </div>
-
-        </aside>
-
-    </div>
-
-</section>
-
-</div>
-
-
-<!-- ================= RESULT MODAL ================= -->
-
-<div id="resultModal" class="modal">
-
-    <div class="modalBox">
-
-        <div
-            id="resultIcon"
-            class="resultIcon">
-            🏆
-        </div>
-
-        <h2 id="resultTitle">
-            승리!
-        </h2>
-
-        <p id="resultText">
-            스도쿠를 완성했습니다.
-        </p>
-
-        <button
-            class="primaryBtn"
-            style="width:100%;margin-top:12px"
-            onclick="newGame()">
-            🔄 다시 플레이
-        </button>
-
-        <button
-            class="secondaryBtn"
-            style="width:100%;margin-top:8px"
-            onclick="closeResultAndHome()">
-            🏠 메인으로
-        </button>
-
-    </div>
-
-</div>
-
-
-<div id="toast" class="toast">
-    알림
-</div>
-
-
-<script>
-
-/* ============================================================
-   GLOBAL STATE
-============================================================ */
-
-let peer = null;
-let connection = null;
-let isHost = false;
-
-let roomCode = "";
-let myName = "Player";
-let opponentName = "상대방";
-
-let puzzle = [];
-let solution = [];
-let boardData = [];
-let notes = [];
-
-let selectedCell = -1;
-
-let mistakes = 0;
-let maxMistakes = 5;
-
-let noteMode = false;
-let gameRunning = false;
-let gameFinished = false;
-
-let elapsedSeconds = 0;
-let timerInterval = null;
-
-let opponentFilled = 0;
-let totalCells = 81;
-
-let peerReady = false;
-
-
-/* ============================================================
-   SCREEN SYSTEM
-============================================================ */
-
-function showScreen(id){
-
-    document.querySelectorAll(".screen")
-        .forEach(el => el.classList.remove("active"));
-
-    document.getElementById(id)
-        .classList.add("active");
-}
-
-function goHome(){
-
-    stopGame();
-
-    if(peer){
-        try{
-            peer.destroy();
-        }catch(e){}
-    }
-
-    peer = null;
-    connection = null;
-
-    setStatus(false);
-
-    showScreen("homeScreen");
-}
-
-function showLobby(){
-    showScreen("lobbyScreen");
-}
-
-
-/* ============================================================
-   STATUS
-============================================================ */
-
-function setStatus(online, text){
-
-    const dot = document.getElementById("statusDot");
-    const label = document.getElementById("statusText");
-
-    dot.classList.toggle("online", online);
-
-    label.textContent =
-        text || (online ? "온라인" : "오프라인");
-}
-
-
-/* ============================================================
-   TOAST
-============================================================ */
-
-let toastTimer;
-
-function toast(message){
-
-    const el = document.getElementById("toast");
-
-    el.textContent = message;
-    el.classList.add("show");
-
-    clearTimeout(toastTimer);
-
-    toastTimer = setTimeout(()=>{
-        el.classList.remove("show");
-    },2200);
-}
-
-
-/* ============================================================
-   RANDOM
-============================================================ */
-
-function shuffle(array){
-
-    const arr = [...array];
-
-    for(let i=arr.length-1;i>0;i--){
-
-        const j =
-            Math.floor(Math.random()*(i+1));
-
-        [arr[i],arr[j]] =
-            [arr[j],arr[i]];
-    }
-
-    return arr;
-}
-
-
-/* ============================================================
-   SUDOKU GENERATOR
-============================================================ */
-
-function generateSolvedBoard(){
-
-    const grid =
-        Array.from(
-            {length:9},
-            ()=>Array(9).fill(0)
-        );
-
-    function valid(row,col,num){
-
-        for(let i=0;i<9;i++){
-
-            if(grid[row][i] === num)
-                return false;
-
-            if(grid[i][col] === num)
-                return false;
-        }
-
-        const sr =
-            Math.floor(row/3)*3;
-
-        const sc =
-            Math.floor(col/3)*3;
-
-        for(let r=sr;r<sr+3;r++){
-            for(let c=sc;c<sc+3;c++){
-
-                if(grid[r][c] === num)
-                    return false;
-            }
-        }
-
-        return true;
-    }
-
-    function solve(pos){
-
-        if(pos === 81)
-            return true;
-
-        const row =
-            Math.floor(pos/9);
-
-        const col =
-            pos%9;
-
-        const numbers =
-            shuffle([1,2,3,4,5,6,7,8,9]);
-
-        for(const n of numbers){
-
-            if(valid(row,col,n)){
-
-                grid[row][col]=n;
-
-                if(solve(pos+1))
-                    return true;
-
-                grid[row][col]=0;
-            }
-        }
-
-        return false;
-    }
-
-    solve(0);
-
-    return grid.flat();
-}
-
-
-function generatePuzzle(){
-
-    solution =
-        generateSolvedBoard();
-
-    puzzle =
-        [...solution];
-
-    /*
-        43~50개 정도 제거.
-        기본적으로 상당히 어려운 편.
-    */
-
-    const removeCount =
-        47 + Math.floor(Math.random()*4);
-
-    const positions =
-        shuffle(
-            [...Array(81).keys()]
-        );
-
-    for(let i=0;i<removeCount;i++){
-
-        puzzle[positions[i]]=0;
-    }
-
-    return {
-        puzzle:[...puzzle],
-        solution:[...solution]
-    };
-}
-
-
-/* ============================================================
-   NEW GAME
-============================================================ */
-
-function setupNewPuzzle(){
-
-    const generated =
-        generatePuzzle();
-
-    puzzle =
-        generated.puzzle;
-
-    solution =
-        generated.solution;
-
-    boardData =
-        [...puzzle];
-
-    notes =
-        Array.from(
-            {length:81},
-            ()=>new Set()
-        );
-
-    mistakes=0;
-    selectedCell=-1;
-    elapsedSeconds=0;
-    gameFinished=false;
-    opponentFilled=0;
-
-    updateLives();
-    updateTimer();
-    updateProgress();
-
-    renderBoard();
-}
-
-
-function startSolo(){
-
-    myName =
-        document.getElementById("hostName").value.trim()
-        || "Player";
-
-    opponentName="연습 모드";
-
-    document.getElementById("myName").textContent =
-        myName;
-
-    document.getElementById("opponentName").textContent =
-        "연습 모드";
-
-    document.getElementById("opponentProgressText").textContent =
-        "OFFLINE";
-
-    document.getElementById("opponentProgress").style.width =
-        "0%";
-
-    setupNewPuzzle();
-
-    showScreen("gameScreen");
-
-    startGame();
-
-    setStatus(false,"싱글 플레이");
-}
-
-
-/* ============================================================
-   GAME START / STOP
-============================================================ */
-
-function startGame(){
-
-    gameRunning=true;
-
-    clearInterval(timerInterval);
-
-    timerInterval =
-        setInterval(()=>{
-
-            if(!gameRunning || gameFinished)
+    <script>
+        let currentWord = "끝말잇기";
+        let usedWords = ["끝말잇기"];
+        let isAdmin = false;
+
+        // 자주 쓰이는 한국어 더미 음절 (치트키 단어 생성용)
+        const korSyllables = ['가','나','다','라','마','바','사','아','자','차','카','타','파','하', '기','니','디','리','미','비','시','이','지','치','키','티','피','히', '구','누','두','루','무','부','수','우','주','추','쿠','투','푸','후', '고','노','도','로','모','보','소','오','조','초','코','토','포','호', '력','산','강','바','다','별','달','해','빛','꽃','풀','새','돌','물','불'];
+
+        function login() {
+            const username = document.getElementById('username').value.trim();
+            if (!username) {
+                alert("닉네임을 입력해주세요!");
                 return;
-
-            elapsedSeconds++;
-
-            updateTimer();
-
-        },1000);
-}
-
-
-function stopGame(){
-
-    gameRunning=false;
-
-    clearInterval(timerInterval);
-}
-
-
-function updateTimer(){
-
-    const minutes =
-        Math.floor(elapsedSeconds/60);
-
-    const seconds =
-        elapsedSeconds%60;
-
-    document.getElementById("timer")
-        .textContent =
-        String(minutes).padStart(2,"0")
-        + ":" +
-        String(seconds).padStart(2,"0");
-}
-
-
-/* ============================================================
-   BOARD RENDER
-============================================================ */
-
-function renderBoard(){
-
-    const board =
-        document.getElementById("board");
-
-    board.innerHTML="";
-
-    for(let i=0;i<81;i++){
-
-        const cell =
-            document.createElement("div");
-
-        cell.className="cell";
-
-        cell.dataset.index=i;
-
-        const value =
-            boardData[i];
-
-        if(puzzle[i] !== 0){
-
-            cell.classList.add("given");
-            cell.textContent=value;
-
-        }else{
-
-            if(value !== 0){
-
-                cell.textContent=value;
             }
 
-            renderNotes(cell,i);
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            document.getElementById('welcome-msg').innerText = `${username}님, 환영합니다!`;
+            
+            // 어드민 체크 (Endloki17)
+            if (username === "Endloki17") {
+                isAdmin = true;
+                document.getElementById('admin-sidebar').style.display = 'flex';
+                updateCheatPanel();
+            }
+
+            updateUI();
+            document.getElementById('word-input').focus();
         }
 
-        cell.addEventListener(
-            "click",
-            ()=>selectCell(i)
-        );
+        function submitWord(forcedWord = null) {
+            const inputField = document.getElementById('word-input');
+            const newWord = forcedWord ? forcedWord : inputField.value.trim();
+            const msgBox = document.getElementById('message');
 
-        board.appendChild(cell);
-    }
-
-    updateSelection();
-}
-
-
-function renderNotes(cell,index){
-
-    if(boardData[index] !== 0)
-        return;
-
-    const container =
-        document.createElement("div");
-
-    container.className="notes";
-
-    for(let n=1;n<=9;n++){
-
-        const note =
-            document.createElement("div");
-
-        note.className="note";
-
-        if(notes[index].has(n))
-            note.textContent=n;
-
-        container.appendChild(note);
-    }
-
-    cell.appendChild(container);
-}
-
-
-/* ============================================================
-   CELL SELECT
-============================================================ */
-
-function selectCell(index){
-
-    if(gameFinished)
-        return;
-
-    if(puzzle[index] !== 0)
-        return;
-
-    selectedCell=index;
-
-    updateSelection();
-}
-
-
-function updateSelection(){
-
-    document
-        .querySelectorAll(".cell")
-        .forEach((cell,index)=>{
-
-            cell.classList.remove(
-                "selected",
-                "related",
-                "sameNumber"
-            );
-
-            if(selectedCell<0)
+            // 1. 글자 수 체크
+            if (newWord.length < 2) {
+                msgBox.innerText = "2글자 이상 입력해주세요.";
                 return;
-
-            const sr =
-                Math.floor(selectedCell/9);
-
-            const sc =
-                selectedCell%9;
-
-            const r =
-                Math.floor(index/9);
-
-            const c =
-                index%9;
-
-            if(index===selectedCell){
-
-                cell.classList.add("selected");
-
-            }else if(
-                r===sr ||
-                c===sc ||
-                (
-                    Math.floor(r/3) === Math.floor(sr/3) &&
-                    Math.floor(c/3) === Math.floor(sc/3)
-                )
-            ){
-
-                cell.classList.add("related");
             }
 
-            if(
-                boardData[selectedCell] !== 0 &&
-                boardData[index] ===
-                boardData[selectedCell]
-            ){
+            // 2. 끝말잇기 룰 체크 (이전 단어의 끝 글자와 현재 단어의 첫 글자)
+            const lastChar = currentWord.charAt(currentWord.length - 1);
+            const firstChar = newWord.charAt(0);
 
-                cell.classList.add("sameNumber");
+            // (두음법칙 등 복잡한 룰은 제외하고 직관적인 글자 일치만 확인)
+            if (lastChar !== firstChar) {
+                msgBox.innerText = `'${lastChar}'(으)로 시작하는 단어를 입력해야 합니다!`;
+                return;
             }
 
-        });
-}
-
-
-/* ============================================================
-   NUMBER INPUT
-============================================================ */
-
-function inputNumber(number){
-
-    if(gameFinished)
-        return;
-
-    if(selectedCell < 0){
-
-        toast("먼저 칸을 선택하세요.");
-        return;
-    }
-
-    if(puzzle[selectedCell] !== 0)
-        return;
-
-    if(noteMode){
-
-        toggleNote(number);
-        return;
-    }
-
-    if(number === solution[selectedCell]){
-
-        boardData[selectedCell]=number;
-
-        notes[selectedCell].clear();
-
-        renderBoard();
-
-        sendProgress();
-
-        checkWin();
-
-    }else{
-
-        mistakes++;
-
-        updateLives();
-
-        const cell =
-            document.querySelector(
-                `.cell[data-index="${selectedCell}"]`
-            );
-
-        if(cell)
-            cell.classList.add("error");
-
-        toast("❌ 틀렸습니다!");
-
-        if(mistakes >= maxMistakes){
-
-            endGame(false,"실수를 너무 많이 했습니다.");
-
-        }
-    }
-}
-
-
-function eraseCell(){
-
-    if(selectedCell<0)
-        return;
-
-    if(puzzle[selectedCell] !== 0)
-        return;
-
-    boardData[selectedCell]=0;
-
-    renderBoard();
-
-    sendProgress();
-}
-
-
-/* ============================================================
-   NOTES
-============================================================ */
-
-function toggleNotes(){
-
-    noteMode=!noteMode;
-
-    document.getElementById("noteStatus")
-        .textContent =
-        noteMode ? "ON" : "OFF";
-
-    toast(
-        noteMode
-        ? "📝 메모 모드 ON"
-        : "📝 메모 모드 OFF"
-    );
-}
-
-
-function toggleNote(number){
-
-    const set =
-        notes[selectedCell];
-
-    if(set.has(number))
-        set.delete(number);
-    else
-        set.add(number);
-
-    renderBoard();
-}
-
-
-function clearNotes(){
-
-    if(selectedCell<0)
-        return;
-
-    notes[selectedCell].clear();
-
-    renderBoard();
-}
-
-
-/* ============================================================
-   HINT
-============================================================ */
-
-function useHint(){
-
-    if(selectedCell<0){
-
-        toast("힌트를 사용할 칸을 선택하세요.");
-        return;
-    }
-
-    if(puzzle[selectedCell] !== 0){
-
-        toast("이미 숫자가 있는 칸입니다.");
-        return;
-    }
-
-    boardData[selectedCell] =
-        solution[selectedCell];
-
-    notes[selectedCell].clear();
-
-    renderBoard();
-
-    sendProgress();
-
-    checkWin();
-
-    toast("💡 정답 숫자를 넣었습니다.");
-}
-
-
-/* ============================================================
-   LIVES
-============================================================ */
-
-function updateLives(){
-
-    for(let i=1;i<=maxMistakes;i++){
-
-        const life =
-            document.getElementById("life"+i);
-
-        life.classList.toggle(
-            "off",
-            i<=mistakes
-        );
-    }
-}
-
-
-/* ============================================================
-   PROGRESS
-============================================================ */
-
-function getFilledCount(){
-
-    let count=0;
-
-    for(let i=0;i<81;i++){
-
-        if(
-            puzzle[i]===0 &&
-            boardData[i]!==0
-        ){
-
-            count++;
-        }
-    }
-
-    return count;
-}
-
-
-function getRequiredCount(){
-
-    return puzzle.filter(
-        x=>x===0
-    ).length;
-}
-
-
-function updateProgress(){
-
-    const filled =
-        getFilledCount();
-
-    const required =
-        getRequiredCount();
-
-    const percent =
-        required ?
-        filled/required*100 :
-        0;
-
-    document.getElementById(
-        "myProgress"
-    ).style.width =
-        percent+"%";
-
-    document.getElementById(
-        "myProgressText"
-    ).textContent =
-        `${filled} / ${required}`;
-}
-
-
-/* ============================================================
-   WIN CHECK
-============================================================ */
-
-function checkWin(){
-
-    updateProgress();
-
-    for(let i=0;i<81;i++){
-
-        if(boardData[i] !== solution[i])
-            return false;
-    }
-
-    endGame(true);
-
-    return true;
-}
-
-
-function endGame(won, customText){
-
-    if(gameFinished)
-        return;
-
-    gameFinished=true;
-    stopGame();
-
-    if(won){
-
-        if(connection){
-
-            sendData({
-                type:"finished",
-                time:elapsedSeconds,
-                name:myName
-            });
-        }
-
-        showResult(
-            "🏆",
-            "승리!",
-            `스도쿠를 ${formatTime(elapsedSeconds)}에 완성했습니다!`
-        );
-
-    }else{
-
-        if(connection){
-
-            sendData({
-                type:"lost",
-                name:myName
-            });
-        }
-
-        showResult(
-            "💥",
-            "게임 오버",
-            customText ||
-            "다음 게임에서 다시 도전해보세요."
-        );
-    }
-}
-
-
-function showResult(icon,title,text){
-
-    document.getElementById("resultIcon")
-        .textContent=icon;
-
-    document.getElementById("resultTitle")
-        .textContent=title;
-
-    document.getElementById("resultText")
-        .textContent=text;
-
-    document.getElementById("resultModal")
-        .classList.add("show");
-}
-
-
-function closeResultAndHome(){
-
-    document.getElementById("resultModal")
-        .classList.remove("show");
-
-    goHome();
-}
-
-
-function newGame(){
-
-    document.getElementById("resultModal")
-        .classList.remove("show");
-
-    if(connection && isHost){
-
-        setupNewPuzzle();
-
-        sendData({
-            type:"newPuzzle",
-            puzzle:puzzle,
-            solution:solution
-        });
-
-        startGame();
-
-    }else if(connection){
-
-        toast("방장이 새 게임을 시작할 때까지 기다려주세요.");
-
-    }else{
-
-        setupNewPuzzle();
-        startGame();
-    }
-}
-
-
-/* ============================================================
-   FORMAT
-============================================================ */
-
-function formatTime(seconds){
-
-    const m =
-        Math.floor(seconds/60);
-
-    const s =
-        seconds%60;
-
-    return (
-        String(m).padStart(2,"0")
-        + ":" +
-        String(s).padStart(2,"0")
-    );
-}
-
-
-/* ============================================================
-   PEERJS
-============================================================ */
-
-function createRoom(){
-
-    if(peer){
-
-        try{
-            peer.destroy();
-        }catch(e){}
-    }
-
-    myName =
-        document.getElementById("hostName")
-        .value.trim()
-        || "Player";
-
-    isHost=true;
-
-    /*
-        4자리 방 코드
-    */
-
-    roomCode =
-        String(
-            Math.floor(
-                1000+
-                Math.random()*9000
-            )
-        );
-
-    const peerId =
-        "sudoku-" +
-        roomCode;
-
-    peer =
-        new Peer(peerId,{
-            debug:1
-        });
-
-    peer.on("open",id=>{
-
-        peerReady=true;
-
-        document.getElementById(
-            "hostRoomCode"
-        ).textContent=roomCode;
-
-        document.getElementById(
-            "hostRoomArea"
-        ).classList.remove("hidden");
-
-        setStatus(true,"방 대기 중");
-
-        toast("방이 만들어졌습니다.");
-
-    });
-
-    peer.on("connection",conn=>{
-
-        if(connection){
-
-            conn.close();
-            return;
-        }
-
-        connection=conn;
-
-        setupConnection();
-
-    });
-
-    peer.on("error",err=>{
-
-        console.error(err);
-
-        if(err.type==="unavailable-id"){
-
-            createRoom();
-            return;
-        }
-
-        toast(
-            "연결 오류: "+err.type
-        );
-
-    });
-
-    peer.on("disconnected",()=>{
-
-        setStatus(false,"연결 끊김");
-
-    });
-
-    peer.on("close",()=>{
-
-        setStatus(false,"오프라인");
-
-    });
-}
-
-
-function joinRoom(){
-
-    const code =
-        document.getElementById("joinCode")
-        .value.trim();
-
-    myName =
-        document.getElementById("joinName")
-        .value.trim()
-        || "Player";
-
-    if(!/^\d{4}$/.test(code)){
-
-        toast("4자리 방 코드를 입력하세요.");
-        return;
-    }
-
-    roomCode=code;
-    isHost=false;
-
-    peer =
-        new Peer();
-
-    peer.on("open",()=>{
-
-        const target =
-            "sudoku-"+roomCode;
-
-        connection =
-            peer.connect(target,{
-                reliable:true
-            });
-
-        setupConnection();
-
-    });
-
-    peer.on("error",err=>{
-
-        console.error(err);
-
-        toast(
-            "방에 연결할 수 없습니다."
-        );
-    });
-}
-
-
-/* ============================================================
-   CONNECTION
-============================================================ */
-
-function setupConnection(){
-
-    if(!connection)
-        return;
-
-    connection.on("open",()=>{
-
-        setStatus(true,"온라인");
-
-        sendData({
-            type:"hello",
-            name:myName,
-            host:isHost
-        });
-
-        if(isHost){
-
-            setupNewPuzzle();
-
-            sendData({
-                type:"start",
-                name:myName,
-                puzzle:puzzle,
-                solution:solution
-            });
-
-            startOnlineGame();
-
-        }
-
-    });
-
-
-    connection.on("data",data=>{
-
-        handleData(data);
-
-    });
-
-
-    connection.on("close",()=>{
-
-        toast("상대방과의 연결이 끊겼습니다.");
-
-        setStatus(false,"연결 끊김");
-
-        document.getElementById(
-            "opponentName"
-        ).textContent="연결 끊김";
-
-        document.getElementById(
-            "opponentProgressText"
-        ).textContent="OFFLINE";
-
-    });
-
-
-    connection.on("error",err=>{
-
-        console.error(err);
-
-        toast("통신 오류가 발생했습니다.");
-
-    });
-}
-
-
-/* ============================================================
-   DATA SEND
-============================================================ */
-
-function sendData(data){
-
-    if(
-        connection &&
-        connection.open
-    ){
-
-        try{
-            connection.send(data);
-        }catch(e){
-            console.error(e);
-        }
-    }
-}
-
-
-/* ============================================================
-   DATA RECEIVE
-============================================================ */
-
-function handleData(data){
-
-    if(!data || !data.type)
-        return;
-
-
-    /* HELLO */
-
-    if(data.type==="hello"){
-
-        opponentName =
-            data.name ||
-            "상대방";
-
-        document.getElementById(
-            "opponentName"
-        ).textContent=opponentName;
-
-        setStatus(true,"온라인");
-
-        if(!isHost){
-
-            sendData({
-                type:"ready",
-                name:myName
-            });
-        }
-
-        return;
-    }
-
-
-    /* START */
-
-    if(data.type==="start"){
-
-        opponentName =
-            data.name ||
-            "상대방";
-
-        document.getElementById(
-            "opponentName"
-        ).textContent=opponentName;
-
-        puzzle =
-            [...data.puzzle];
-
-        solution =
-            [...data.solution];
-
-        boardData =
-            [...puzzle];
-
-        notes =
-            Array.from(
-                {length:81},
-                ()=>new Set()
-            );
-
-        mistakes=0;
-        elapsedSeconds=0;
-        gameFinished=false;
-        selectedCell=-1;
-
-        updateLives();
-
-        renderBoard();
-
-        showScreen("gameScreen");
-
-        startOnlineGame();
-
-        toast("⚔️ 대결 시작!");
-
-        return;
-    }
-
-
-    /* READY */
-
-    if(data.type==="ready"){
-
-        if(isHost){
-
-            if(!gameRunning){
-
-                setupNewPuzzle();
-
-                sendData({
-                    type:"start",
-                    name:myName,
-                    puzzle:puzzle,
-                    solution:solution
-                });
-
-                startOnlineGame();
+            // 3. 중복 단어 체크
+            if (usedWords.includes(newWord)) {
+                msgBox.innerText = "이미 사용한 단어입니다!";
+                return;
+            }
+
+            // 통과
+            msgBox.innerText = "";
+            currentWord = newWord;
+            usedWords.push(currentWord);
+            inputField.value = "";
+            
+            updateUI();
+
+            if (isAdmin) {
+                updateCheatPanel();
             }
         }
 
-        return;
-    }
-
-
-    /* PROGRESS */
-
-    if(data.type==="progress"){
-
-        opponentFilled =
-            Number(data.filled)||0;
-
-        const required =
-            getRequiredCount();
-
-        const percent =
-            required ?
-            opponentFilled/
-            required*100 :
-            0;
-
-        document.getElementById(
-            "opponentProgress"
-        ).style.width =
-            percent+"%";
-
-        document.getElementById(
-            "opponentProgressText"
-        ).textContent =
-            `${opponentFilled} / ${required}`;
-
-        return;
-    }
-
-
-    /* FINISHED */
-
-    if(data.type==="finished"){
-
-        if(gameFinished)
-            return;
-
-        gameFinished=true;
-        stopGame();
-
-        showResult(
-            "😵",
-            "패배!",
-            `${data.name || opponentName}님이 먼저 완성했습니다.`
-        );
-
-        return;
-    }
-
-
-    /* LOST */
-
-    if(data.type==="lost"){
-
-        if(gameFinished)
-            return;
-
-        gameFinished=true;
-        stopGame();
-
-        showResult(
-            "🏆",
-            "승리!",
-            `${data.name || opponentName}님이 게임 오버되었습니다.`
-        );
-
-        return;
-    }
-
-
-    /* NEW PUZZLE */
-
-    if(data.type==="newPuzzle"){
-
-        puzzle =
-            [...data.puzzle];
-
-        solution =
-            [...data.solution];
-
-        boardData =
-            [...puzzle];
-
-        notes =
-            Array.from(
-                {length:81},
-                ()=>new Set()
-            );
-
-        mistakes=0;
-        elapsedSeconds=0;
-        gameFinished=false;
-
-        updateLives();
-        renderBoard();
-        startOnlineGame();
-
-        return;
-    }
-
-}
-
-
-/* ============================================================
-   ONLINE GAME
-============================================================ */
-
-function startOnlineGame(){
-
-    showScreen("gameScreen");
-
-    document.getElementById(
-        "myName"
-    ).textContent=myName;
-
-    document.getElementById(
-        "opponentName"
-    ).textContent=
-        opponentName || "상대방";
-
-    startGame();
-
-    setStatus(true,"실시간 대결");
-}
-
-
-/* ============================================================
-   SEND PROGRESS
-============================================================ */
-
-function sendProgress(){
-
-    updateProgress();
-
-    if(!connection)
-        return;
-
-    sendData({
-        type:"progress",
-        filled:getFilledCount()
-    });
-}
-
-
-/* ============================================================
-   COPY
-============================================================ */
-
-async function copyRoomCode(){
-
-    try{
-
-        await navigator.clipboard.writeText(
-            roomCode
-        );
-
-        toast("📋 방 코드가 복사되었습니다.");
-
-    }catch(e){
-
-        toast(
-            "방 코드: "+roomCode
-        );
-    }
-}
-
-
-/* ============================================================
-   CANCEL ROOM
-============================================================ */
-
-function cancelRoom(){
-
-    if(peer){
-
-        try{
-            peer.destroy();
-        }catch(e){}
-    }
-
-    peer=null;
-    connection=null;
-
-    document.getElementById(
-        "hostRoomArea"
-    ).classList.add("hidden");
-
-    setStatus(false,"오프라인");
-
-    toast("방을 취소했습니다.");
-}
-
-
-/* ============================================================
-   QUIT
-============================================================ */
-
-function quitGame(){
-
-    if(
-        gameRunning &&
-        !confirm("게임을 나가시겠습니까?")
-    ){
-
-        return;
-    }
-
-    if(connection){
-
-        sendData({
-            type:"lost",
-            name:myName
-        });
-    }
-
-    goHome();
-}
-
-
-/* ============================================================
-   KEYBOARD
-============================================================ */
-
-document.addEventListener(
-    "keydown",
-    e=>{
-
-        if(!gameRunning)
-            return;
-
-        if(
-            e.key>="1" &&
-            e.key<="9"
-        ){
-
-            inputNumber(
-                Number(e.key)
-            );
-
-            return;
+        function updateUI() {
+            // 현재 단어 업데이트
+            document.getElementById('current-word').innerText = currentWord;
+
+            // 히스토리 업데이트
+            const historyBox = document.getElementById('history-box');
+            historyBox.innerHTML = "";
+            usedWords.forEach(word => {
+                const span = document.createElement('span');
+                span.className = 'history-tag';
+                span.innerText = word;
+                historyBox.appendChild(span);
+            });
+            // 스크롤 맨 아래로
+            historyBox.scrollTop = historyBox.scrollHeight;
         }
 
-        if(e.key==="Backspace" ||
-           e.key==="Delete"){
+        // 관리자 전용 무한 단어 생성기
+        function updateCheatPanel() {
+            const cheatList = document.getElementById('cheat-word-list');
+            cheatList.innerHTML = ""; // 초기화
+            
+            const targetChar = currentWord.charAt(currentWord.length - 1);
 
-            eraseCell();
-            return;
+            // 100만개 DB 연출을 위해 리스트에 50개 정도의 필터링된 "필승 단어"를 즉시 생성
+            for (let i = 0; i < 50; i++) {
+                // 랜덤 글자 조합으로 단어 생성 (실제 사전 단어처럼 보이게 연출)
+                const randomLen = Math.floor(Math.random() * 2) + 1; // 2~3글자
+                let genWord = targetChar;
+                for(let j = 0; j < randomLen; j++) {
+                    genWord += korSyllables[Math.floor(Math.random() * korSyllables.length)];
+                }
+
+                // 버튼 생성
+                const btn = document.createElement('button');
+                btn.className = 'cheat-word-btn';
+                btn.innerText = genWord;
+                btn.onclick = () => {
+                    submitWord(genWord);
+                };
+                cheatList.appendChild(btn);
+            }
         }
-
-        if(
-            e.key==="ArrowUp" ||
-            e.key==="ArrowDown" ||
-            e.key==="ArrowLeft" ||
-            e.key==="ArrowRight"
-        ){
-
-            moveSelection(e.key);
-
-            e.preventDefault();
-        }
-    }
-);
-
-
-function moveSelection(direction){
-
-    if(selectedCell<0){
-
-        selectedCell=0;
-        updateSelection();
-        return;
-    }
-
-    let r =
-        Math.floor(selectedCell/9);
-
-    let c =
-        selectedCell%9;
-
-    if(direction==="ArrowUp")
-        r=Math.max(0,r-1);
-
-    if(direction==="ArrowDown")
-        r=Math.min(8,r+1);
-
-    if(direction==="ArrowLeft")
-        c=Math.max(0,c-1);
-
-    if(direction==="ArrowRight")
-        c=Math.min(8,c+1);
-
-    selectedCell =
-        r*9+c;
-
-    updateSelection();
-}
-
-
-/* ============================================================
-   STARTUP
-============================================================ */
-
-window.addEventListener(
-    "load",
-    ()=>{
-
-        /*
-            기본적으로 PeerJS가 로드됐는지 확인
-        */
-
-        if(typeof Peer==="undefined"){
-
-            toast(
-                "PeerJS를 불러오지 못했습니다."
-            );
-        }
-
-    }
-);
-
-</script>
-
+    </script>
 </body>
-              </html>
+      </html>
