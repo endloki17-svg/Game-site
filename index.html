@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geometry Dash - Stereo Madness</title>
+    <title>Geometry Dash - Stereo Madness with Music</title>
     <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -16,7 +16,8 @@
         }
 
         #game-container {
-            position: relative; width: 800px; height: 450px;
+            /* 맵 높이에 맞춰 캔버스 세로 길이를 480px로 수정 */
+            position: relative; width: 800px; height: 480px;
             box-shadow: 0 0 30px rgba(0, 150, 255, 0.4);
             background: linear-gradient(to bottom, #115, #112);
             overflow: hidden;
@@ -76,7 +77,7 @@
         <button id="lobby-btn">다시 하기</button>
     </div>
 
-    <canvas id="gameCanvas" width="800" height="450"></canvas>
+    <canvas id="gameCanvas" width="800" height="480"></canvas>
 </div>
 
 <script>
@@ -84,6 +85,10 @@
     const ctx = canvas.getContext('2d');
     const uiLobby = document.getElementById('lobby');
     const uiGameOver = document.getElementById('game-over');
+
+    // 🎵 배경음악 세팅 (실제 스테레오 매드니스 음원이 있다면 파일명으로 교체하세요!)
+    const bgm = new Audio('https://cdn.pixabay.com/download/audio/2022/01/21/audio_31743c58be.mp3');
+    bgm.loop = true;
 
     const BLOCK_SIZE = 40;
     let gameSpeed = 7.5;
@@ -96,9 +101,8 @@
     const peerPlayer = { active: false, camX: 0, y: 0, rot: 0, mode: 'cube', dead: false };
     let peer = null, conn = null, isHost = false, isMultiplayer = false;
 
-    // Stereo Madness (Stage 1) 근사치 맵 데이터
+    // 맵 데이터 (총 12행, 마지막 11번 인덱스가 꽉 찬 바닥)
     const levelMap = [
-        ".......................................................................................................................................................................................................................................................................................................................................................................................",
         ".......................................................................................................................................................................................................................................................................................................................................................................................",
         ".......................................................................................................................................................................................................................................................................................................................................................................................",
         ".......................................................................................................................................................................................................................................................................................................................................................................................",
@@ -109,8 +113,7 @@
         "...........................................................XXXX......XXXX...............................................X...X........X.....X..........X........................................................................................................................................................................................................................",
         ".................................................XXXX......XXXX......XXXX...............................................X...X........X.....X..........X........................................................................................................................................................................................................................",
         ".......................................XXXX......XXXX......XXXX......XXXX...............................................X...X........X.....X..........X........................................C...............................................................................................................................................................................",
-        ".......................................XXXX......XXXX......XXXX......XXXX...............................................X.............................X.......................................................................^..^..^.........................................................................................................................................F",
-        ".......................^.........^.....XXXX..^...XXXX..^...XXXX..^...XXXX........^..^.........^..^..^...................X.............................X...................................XXXXXXX...XXXXX..................................X....X....X.........................................................................................................................",
+        ".......................^.........^.....XXXX..^...XXXX..^...XXXX..^...XXXX........^..^.........^..^..^...................X.............................X...................................XXXXXXX...XXXXX..................................X....X....X.........................................................................................................................F",
         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
     ];
 
@@ -165,7 +168,7 @@
         isMultiplayer = false; peerPlayer.active = false; startGame();
     });
 
-    // --- 입력 및 물리 엔진 (완전 개편) ---
+    // --- 입력 및 물리 엔진 ---
     function handleInput(e, state) {
         if (e.type === 'keydown' && (e.code === 'Space' || e.code === 'ArrowUp')) e.preventDefault();
         if (e.type === 'keydown' && e.code !== 'Space' && e.code !== 'ArrowUp') return;
@@ -184,28 +187,23 @@
     function updatePhysics() {
         if (player.dead) return;
 
-        // 원작 고증 물리 엔진 적용
         if (player.mode === 'cube') {
-            player.dy += 1.3; // 중력
-            if (isHolding && player.grounded) { // 꾹 누르고 있으면 자동 점프 연계
+            player.dy += 1.3;
+            if (isHolding && player.grounded) {
                 player.dy = -13.5;
                 player.grounded = false;
             }
             player.dy = Math.max(-15, Math.min(player.dy, 15));
-            
-            // 공중 회전 vs 바닥 착지 스냅
             if (!player.grounded) player.rotation += 6;
             else player.rotation = Math.round(player.rotation / 90) * 90;
 
         } else if (player.mode === 'ship') {
-            // 비행기: 누르면 가속도, 떼면 중력
             if (isHolding) player.dy -= 0.8; 
             else player.dy += 0.7;
-            player.dy = Math.max(-7, Math.min(player.dy, 7)); // 속도 제한
-            player.rotation = player.dy * 3; // 속도에 비례해 기체가 위아래로 기울어짐
+            player.dy = Math.max(-7, Math.min(player.dy, 7));
+            player.rotation = player.dy * 3;
 
         } else if (player.mode === 'wave') {
-            // 웨이브: 즉각적인 대각선 이동
             player.dy = isHolding ? -8 : 8;
             player.rotation = isHolding ? -45 : 45;
         }
@@ -216,7 +214,6 @@
 
         const pRect = { x: player.x, y: player.y, w: player.size, h: player.size };
 
-        // 단단한 벽(바닥) 충돌 판정
         for (let b of blocks) {
             let bRect = { x: b.x - cameraX, y: b.y, w: b.size, h: b.size };
             if (checkAABB(pRect, bRect)) {
@@ -240,13 +237,11 @@
 
         if (hitWall || player.y < -50 || player.y > canvas.height + 50) die();
 
-        // 가시 충돌 (매우 자비롭게 박스 축소)
         for (let s of spikes) {
             let sRect = { x: s.x - cameraX, y: s.y + 10, w: s.size, h: s.size - 10 };
             if (checkAABB(pRect, sRect, 8)) die();
         }
 
-        // 포탈
         for (let i = 0; i < portals.length; i++) {
             let pt = portals[i];
             let ptRect = { x: pt.x - cameraX, y: pt.y, w: BLOCK_SIZE, h: BLOCK_SIZE * 2 };
@@ -280,17 +275,13 @@
             ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
             ctx.strokeRect(-p.size / 2, -p.size / 2, p.size, p.size);
         } else if (p.mode === 'ship') {
-            // 비행기 모양 (로켓 형태)
             ctx.beginPath();
             ctx.moveTo(p.size/2 + 10, 0); ctx.lineTo(-p.size/2, -p.size/2.5); ctx.lineTo(-p.size/2, p.size/2.5);
             ctx.closePath(); ctx.fill(); ctx.stroke();
-            // 로켓 분사구 이펙트
             if(isHolding && !isGhost) {
-                ctx.fillStyle = '#ff9900';
-                ctx.fillRect(-p.size/2 - 15, -5, 15, 10);
+                ctx.fillStyle = '#ff9900'; ctx.fillRect(-p.size/2 - 15, -5, 15, 10);
             }
         } else if (p.mode === 'wave') {
-            // 웨이브 (다트 형태)
             ctx.beginPath();
             ctx.moveTo(p.size/2 + 5, 0); ctx.lineTo(-p.size/2, -p.size/3); ctx.lineTo(-p.size/2, p.size/3);
             ctx.closePath(); ctx.fill(); ctx.stroke();
@@ -367,8 +358,9 @@
 
     function initGame() {
         loadLevel();
-        player.x = 150; player.y = 350; player.dy = 0; player.rotation = 0;
-        player.mode = 'cube'; player.dead = false; player.grounded = false;
+        // 🚀 바닥 좌표(440px)에 맞춰 플레이어 사이즈(30)만큼 정확히 뺀 410px로 스폰 조정 완!
+        player.x = 150; player.y = 410; player.dy = 0; player.rotation = 0;
+        player.mode = 'cube'; player.dead = false; player.grounded = true;
         cameraX = 0; frame = 0; isHolding = false;
     }
 
@@ -376,10 +368,15 @@
         if (isHost && conn) conn.send({ type: 'start' });
         uiLobby.classList.add('hidden'); uiGameOver.classList.add('hidden');
         initGame(); isPlaying = true; animate();
+        
+        // 🎵 음악 재생 (브라우저 정책 상 사용자가 클릭한 이후에만 재생 가능)
+        bgm.currentTime = 0;
+        bgm.play().catch(e => console.log("오디오 재생 실패:", e));
     }
 
     function gameOver(msg) {
         isPlaying = false; cancelAnimationFrame(animationId);
+        bgm.pause(); // 음악 정지
         document.getElementById('result-title').innerText = msg;
         let p = Math.min(100, Math.floor(((player.x + cameraX) / maxLevelWidth) * 100));
         document.getElementById('progress-text').innerText = `Progress: ${p}%`;
