@@ -3,111 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geometry Dash Web Clone</title>
+    <title>Geometry Dash - Online Multiplayer</title>
+    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
         body {
-            margin: 0;
-            padding: 0;
-            background-color: #111;
-            color: #fff;
+            margin: 0; padding: 0; background-color: #0b0b1a; color: #fff;
             font-family: 'Press Start 2P', cursive;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
+            display: flex; justify-content: center; align-items: center; height: 100vh;
+            overflow: hidden; user-select: none;
         }
 
         #game-container {
-            position: relative;
-            width: 800px;
-            height: 400px;
-            box-shadow: 0 0 20px rgba(0, 255, 204, 0.5);
-            background: linear-gradient(to bottom, #1a1a2e, #16213e);
+            position: relative; width: 800px; height: 450px;
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.3);
+            background: linear-gradient(to bottom, #10102b, #1a1a3a);
             overflow: hidden;
         }
 
-        /* 로비 및 게임 오버 화면 UI */
         .screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background-color: rgba(0, 0, 0, 0.7);
-            z-index: 10;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background-color: rgba(0, 0, 0, 0.85); z-index: 10; backdrop-filter: blur(5px);
         }
 
-        h1 {
-            color: #00ffcc;
-            text-shadow: 2px 2px 0px #ff0055;
-            font-size: 36px;
-            margin-bottom: 40px;
-            text-align: center;
-            line-height: 1.5;
+        h1 { color: #00ffcc; text-shadow: 3px 3px 0px #ff0055; font-size: 32px; margin-bottom: 20px; }
+        h2 { color: #fff; font-size: 16px; margin-bottom: 20px; }
+
+        .panel { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 20px;}
+        
+        input {
+            padding: 10px; font-family: 'Press Start 2P', cursive; font-size: 12px;
+            margin-bottom: 15px; width: 250px; text-align: center; border: 2px solid #00ffcc;
+            background: #111; color: #00ffcc; outline: none;
         }
 
         button {
-            padding: 15px 30px;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 16px;
-            color: #fff;
-            background-color: #ff0055;
-            border: 4px solid #fff;
-            cursor: pointer;
-            transition: transform 0.1s, background-color 0.2s;
+            padding: 15px 20px; font-family: 'Press Start 2P', cursive; font-size: 14px;
+            color: #fff; background-color: #ff0055; border: 3px solid #fff;
+            cursor: pointer; transition: transform 0.1s, background-color 0.2s;
+            margin: 5px;
         }
+        button:hover { background-color: #ff3377; transform: scale(1.05); }
+        button:active { transform: scale(0.95); }
+        button:disabled { background-color: #555; border-color: #777; cursor: not-allowed; transform: none; }
 
-        button:hover {
-            background-color: #ff3377;
-            transform: scale(1.05);
-        }
-
-        button:active {
-            transform: scale(0.95);
-        }
-
-        canvas {
-            display: block;
-        }
-
-        .hidden {
-            display: none !important;
-        }
+        canvas { display: block; }
+        .hidden { display: none !important; }
+        
+        #status-msg { color: #ffeb3b; font-size: 10px; margin-top: 15px; height: 15px; }
     </style>
 </head>
 <body>
 
 <div id="game-container">
     <div id="lobby" class="screen">
-        <h1>JS DASH</h1>
-        <button id="start-btn">PLAY</button>
+        <h1>GEO-DASH ONLINE</h1>
+        
+        <div class="panel">
+            <h2>내 ID: <span id="my-id">생성 중...</span></h2>
+            <button id="host-btn" disabled>방 만들기 (Host)</button>
+        </div>
+
+        <div class="panel">
+            <input type="text" id="target-id" placeholder="친구 ID 입력">
+            <br>
+            <button id="join-btn" disabled>접속하기 (Join)</button>
+        </div>
+        
+        <button id="solo-btn" style="background-color: #00ffcc; color: #000; border-color: #000;">솔로 플레이</button>
+        <p id="status-msg"></p>
     </div>
 
     <div id="game-over" class="screen hidden">
-        <h1>CRASHED!</h1>
-        <p id="final-score" style="margin-bottom: 30px; color: #ffeb3b;">Score: 0</p>
-        <button id="restart-btn">RETRY</button>
+        <h1 id="result-title">CRASHED!</h1>
+        <p id="final-score" style="margin-bottom: 30px; color: #ffeb3b; font-size: 18px;">Score: 0</p>
+        <button id="lobby-btn">로비로 돌아가기</button>
     </div>
 
-    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <canvas id="gameCanvas" width="800" height="450"></canvas>
 </div>
 
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    // UI 요소
+    // UI 엘리먼트
     const lobby = document.getElementById('lobby');
     const gameOverScreen = document.getElementById('game-over');
-    const startBtn = document.getElementById('start-btn');
-    const restartBtn = document.getElementById('restart-btn');
+    const myIdDisplay = document.getElementById('my-id');
+    const targetIdInput = document.getElementById('target-id');
+    const hostBtn = document.getElementById('host-btn');
+    const joinBtn = document.getElementById('join-btn');
+    const soloBtn = document.getElementById('solo-btn');
+    const lobbyBtn = document.getElementById('lobby-btn');
+    const statusMsg = document.getElementById('status-msg');
+    const resultTitle = document.getElementById('result-title');
     const finalScoreText = document.getElementById('final-score');
 
     // 게임 상태 변수
@@ -115,75 +107,173 @@
     let animationId;
     let frame = 0;
     let score = 0;
-    let gameSpeed = 6;
+    let gameSpeed = 8; // 속도 증가로 시원한 느낌
+    let bgOffset = 0;
 
-    // 플레이어 (큐브) 객체
-    const player = {
-        x: 100,
-        y: 0,
-        size: 30,
-        dy: 0,
-        gravity: 0.8,
-        jumpPower: -12,
-        grounded: false,
-        rotation: 0
-    };
+    // 플레이어 물리 상수 (훨씬 빠르고 즉각적인 반응성)
+    const GRAVITY = 1.2;
+    const JUMP_POWER = -16;
+    const GROUND_HEIGHT = 60;
+    const FLOOR_Y = canvas.height - GROUND_HEIGHT;
 
-    const groundHeight = 50;
-    const floorY = canvas.height - groundHeight;
+    // 내 캐릭터
+    const player = { x: 100, y: FLOOR_Y - 30, size: 30, dy: 0, grounded: true, rotation: 0, dead: false };
+    
+    // 잔상(Trail) 배열
+    let trails = [];
 
-    // 장애물 배열
+    // 멀티플레이 데이터 (상대방 고스트)
+    const peerPlayer = { x: 100, y: FLOOR_Y - 30, size: 30, rotation: 0, active: false, dead: false };
+    
+    // 네트워크 변수
+    let peer = null;
+    let conn = null;
+    let isHost = false;
+    let isMultiplayer = false;
+
+    // 장애물 배열 및 생성 제어
     let obstacles = [];
+    let nextSpawnFrame = 60;
 
-    // 키 입력 처리 (스페이스바, 마우스 클릭)
-    function handleJump(e) {
-        if ((e.type === 'keydown' && e.code === 'Space') || e.type === 'mousedown') {
-            if (isPlaying && player.grounded) {
-                player.dy = player.jumpPower;
+    // --- PeerJS 네트워크 설정 ---
+    function initPeer() {
+        peer = new Peer(); // 랜덤 ID 생성
+        
+        peer.on('open', (id) => {
+            myIdDisplay.innerText = id;
+            hostBtn.disabled = false;
+            joinBtn.disabled = false;
+        });
+
+        // 호스트: 누군가 접속했을 때
+        peer.on('connection', (connection) => {
+            conn = connection;
+            setupConnection();
+            isHost = true;
+            statusMsg.innerText = "상대방 접속 완료! 게임을 시작합니다...";
+            setTimeout(startGame, 1500);
+        });
+
+        peer.on('error', (err) => {
+            statusMsg.innerText = "통신 에러: " + err.type;
+        });
+    }
+
+    hostBtn.addEventListener('click', () => {
+        statusMsg.innerText = "친구의 접속을 기다리는 중...";
+        hostBtn.disabled = true; joinBtn.disabled = true; soloBtn.disabled = true;
+    });
+
+    joinBtn.addEventListener('click', () => {
+        const targetId = targetIdInput.value.trim();
+        if(!targetId) return alert("ID를 입력하세요.");
+        statusMsg.innerText = "접속 시도 중...";
+        conn = peer.connect(targetId);
+        
+        conn.on('open', () => {
+            setupConnection();
+            isHost = false;
+            statusMsg.innerText = "접속 성공! 호스트의 시작을 기다립니다...";
+        });
+    });
+
+    // 데이터 송수신 설정
+    function setupConnection() {
+        isMultiplayer = true;
+        peerPlayer.active = true;
+
+        conn.on('data', (data) => {
+            if(data.type === 'start') {
+                startGame();
+            } else if (data.type === 'sync') {
+                // 상대방 위치 실시간 동기화
+                peerPlayer.y = data.y;
+                peerPlayer.rotation = data.rotation;
+                peerPlayer.dead = data.dead;
+            } else if (data.type === 'spawn' && !isHost) {
+                // 호스트가 생성한 장애물을 똑같이 생성
+                obstacles.push(new Obstacle(data.obsData));
+            }
+        });
+    }
+
+    soloBtn.addEventListener('click', () => {
+        isMultiplayer = false; peerPlayer.active = false;
+        startGame();
+    });
+
+    // --- 게임 로직 ---
+
+    // 키 입력 처리 (즉각 반응)
+    function handleInput(e) {
+        if (e.type === 'keydown' && (e.code === 'Space' || e.code === 'ArrowUp')) {
+            e.preventDefault(); // 스크롤 방지
+        }
+        
+        if ((e.type === 'keydown' && (e.code === 'Space' || e.code === 'ArrowUp')) || e.type === 'mousedown') {
+            if (isPlaying && !player.dead && player.grounded) {
+                player.dy = JUMP_POWER;
                 player.grounded = false;
             }
         }
     }
 
-    window.addEventListener('keydown', handleJump);
-    window.addEventListener('mousedown', handleJump);
+    window.addEventListener('keydown', handleInput, { passive: false });
+    window.addEventListener('mousedown', handleInput);
 
-    // 게임 초기화
     function initGame() {
-        player.y = floorY - player.size;
-        player.dy = 0;
-        player.rotation = 0;
-        player.grounded = true;
-        obstacles = [];
-        score = 0;
-        frame = 0;
-        gameSpeed = 6;
+        player.y = FLOOR_Y - player.size;
+        player.dy = 0; player.rotation = 0; player.grounded = true; player.dead = false;
+        peerPlayer.dead = false;
+        obstacles = []; trails = [];
+        score = 0; frame = 0; gameSpeed = 9; nextSpawnFrame = 60;
+        bgOffset = 0;
     }
 
-    // 장애물 생성 클래스
+    // 장애물 클래스 (다양화)
     class Obstacle {
-        constructor() {
-            this.width = 30;
-            this.height = Math.random() > 0.5 ? 30 : 50; // 랜덤 높이 (가시 또는 블록)
-            this.x = canvas.width;
-            this.y = floorY - this.height;
-            this.color = '#ff0055';
+        constructor(data = null) {
+            if (data) {
+                this.x = data.x; this.y = data.y; this.width = data.w; this.height = data.h; this.type = data.type;
+            } else {
+                this.x = canvas.width;
+                this.type = Math.random();
+                
+                if (this.type < 0.5) {
+                    // 일반 가시
+                    this.width = 30; this.height = 35;
+                    this.y = FLOOR_Y - this.height;
+                    this.drawType = 'spike';
+                } else if (this.type < 0.8) {
+                    // 넓은 블록 (공중에 떠있는 방해물)
+                    this.width = 40; this.height = 40;
+                    this.y = FLOOR_Y - this.height - 45; // 점프로 피하거나 아래로 지나가야함
+                    this.drawType = 'block';
+                } else {
+                    // 연속 가시 (넓음)
+                    this.width = 60; this.height = 30;
+                    this.y = FLOOR_Y - this.height;
+                    this.drawType = 'wide_spike';
+                }
+            }
         }
 
         draw() {
-            ctx.fillStyle = this.color;
-            // 가시 모양 그리기
-            ctx.beginPath();
-            ctx.moveTo(this.x + this.width / 2, this.y);
-            ctx.lineTo(this.x + this.width, this.y + this.height);
-            ctx.lineTo(this.x, this.y + this.height);
-            ctx.closePath();
-            ctx.fill();
-            
-            // 테두리
+            ctx.fillStyle = '#ff0055';
             ctx.strokeStyle = '#fff';
             ctx.lineWidth = 2;
-            ctx.stroke();
+
+            if (this.drawType === 'spike' || this.drawType === 'wide_spike') {
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, this.y);
+                ctx.lineTo(this.x + this.width, this.y + this.height);
+                ctx.lineTo(this.x, this.y + this.height);
+                ctx.closePath();
+                ctx.fill(); ctx.stroke();
+            } else if (this.drawType === 'block') {
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+            }
         }
 
         update() {
@@ -192,65 +282,66 @@
         }
     }
 
-    // 충돌 감지 로직 (AABB)
-    function checkCollision(player, obs) {
-        // 플레이어의 히트박스를 약간 작게 설정하여 억울한 죽음 방지
-        const hitboxPadding = 4; 
+    // 정밀한 AABB 충돌 판정
+    function checkCollision(p, obs) {
+        const padding = 5; // 억울한 죽음 방지용 여백
         return (
-            player.x + hitboxPadding < obs.x + obs.width &&
-            player.x + player.size - hitboxPadding > obs.x &&
-            player.y + hitboxPadding < obs.y + obs.height &&
-            player.y + player.size - hitboxPadding > obs.y
+            p.x + padding < obs.x + obs.width &&
+            p.x + p.size - padding > obs.x &&
+            p.y + padding < obs.y + obs.height &&
+            p.y + p.size - padding > obs.y
         );
     }
 
-    // 배경 그리기 (그리드 라인)
+    // 화려한 배경 그리기
     function drawBackground() {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < canvas.width; i += 40) {
-            ctx.beginPath();
-            ctx.moveTo(i - (frame % 40), 0);
-            ctx.lineTo(i - (frame % 40), canvas.height);
-            ctx.stroke();
-        }
+        // 시차 스크롤 배경 라인
+        bgOffset -= gameSpeed * 0.2;
+        if(bgOffset <= -60) bgOffset = 0;
         
-        // 바닥 그리기
+        ctx.strokeStyle = 'rgba(0, 255, 204, 0.1)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= canvas.width + 60; i += 60) {
+            ctx.beginPath(); ctx.moveTo(i + bgOffset, 0); ctx.lineTo(i + bgOffset, canvas.height); ctx.stroke();
+        }
+
+        // 바닥 패턴
+        ctx.fillStyle = '#111';
+        ctx.fillRect(0, FLOOR_Y, canvas.width, GROUND_HEIGHT);
+        
         ctx.fillStyle = '#222';
-        ctx.fillRect(0, floorY, canvas.width, groundHeight);
-        ctx.strokeStyle = '#00ffcc';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(0, floorY);
-        ctx.lineTo(canvas.width, floorY);
-        ctx.stroke();
+        for(let i = 0; i < canvas.width; i+=40) {
+            ctx.fillRect(i - (frame * gameSpeed) % 40, FLOOR_Y, 20, GROUND_HEIGHT);
+        }
+
+        ctx.strokeStyle = '#00ffcc'; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(0, FLOOR_Y); ctx.lineTo(canvas.width, FLOOR_Y); ctx.stroke();
     }
 
-    // 플레이어 그리기 (회전 로직 포함)
-    function drawPlayer() {
+    // 플레이어 그리기 로직 분리
+    function drawCube(p, color, isGhost = false) {
+        if (p.dead) return;
+
         ctx.save();
-        // 회전 중심점을 플레이어의 중앙으로 이동
-        ctx.translate(player.x + player.size / 2, player.y + player.size / 2);
+        ctx.translate(p.x + p.size / 2, p.y + p.size / 2);
         
-        // 공중에 있을 때 회전, 바닥에 닿으면 90도 각도로 스냅
-        if (!player.grounded) {
-            player.rotation += 6; // 회전 속도
-        } else {
-            player.rotation = Math.round(player.rotation / 90) * 90; 
+        if (!p.grounded && !isGhost) {
+            p.rotation += 8; // 공중 회전
+        } else if (!isGhost) {
+            p.rotation = Math.round(p.rotation / 90) * 90; // 착지 시 스냅
         }
         
-        ctx.rotate((player.rotation * Math.PI) / 180);
+        ctx.rotate((p.rotation * Math.PI) / 180);
         
-        // 큐브 그리기
-        ctx.fillStyle = '#00ffcc';
-        ctx.fillRect(-player.size / 2, -player.size / 2, player.size, player.size);
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(-player.size / 2, -player.size / 2, player.size, player.size);
+        ctx.globalAlpha = isGhost ? 0.3 : 1;
+        ctx.fillStyle = color;
+        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
         
-        // 큐브 안의 작은 사각형 (디테일)
-        ctx.fillStyle = '#16213e';
-        ctx.fillRect(-player.size / 4, -player.size / 4, player.size / 2, player.size / 2);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+        ctx.strokeRect(-p.size / 2, -p.size / 2, p.size, p.size);
+        
+        ctx.fillStyle = isGhost ? '#555' : '#16213e';
+        ctx.fillRect(-p.size / 4, -p.size / 4, p.size / 2, p.size / 2);
         
         ctx.restore();
     }
@@ -260,62 +351,114 @@
         if (!isPlaying) return;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
         drawBackground();
 
-        // 플레이어 물리 적용
-        player.dy += player.gravity;
-        player.y += player.dy;
+        // 1. 내 플레이어 물리 처리
+        if (!player.dead) {
+            player.dy += GRAVITY;
+            player.y += player.dy;
 
-        // 바닥 충돌 처리
-        if (player.y + player.size >= floorY) {
-            player.y = floorY - player.size;
-            player.dy = 0;
-            player.grounded = true;
+            if (player.y + player.size >= FLOOR_Y) {
+                player.y = FLOOR_Y - player.size;
+                player.dy = 0;
+                player.grounded = true;
+            } else {
+                player.grounded = false;
+            }
+
+            // 잔상 효과 (프레임마다 추가)
+            if (frame % 3 === 0) {
+                trails.push({x: player.x, y: player.y, rotation: player.rotation, alpha: 0.5});
+            }
         }
 
-        drawPlayer();
-
-        // 장애물 생성 (일정 프레임마다)
-        if (frame % Math.floor(Math.random() * 40 + 60) === 0) {
-            obstacles.push(new Obstacle());
+        // 잔상 렌더링
+        for(let i=0; i<trails.length; i++) {
+            let t = trails[i];
+            t.x -= gameSpeed; // 맵과 함께 뒤로 밀림
+            t.alpha -= 0.05;
+            if(t.alpha <= 0) { trails.splice(i, 1); i--; continue; }
+            
+            ctx.save();
+            ctx.globalAlpha = t.alpha;
+            ctx.translate(t.x + player.size/2, t.y + player.size/2);
+            ctx.rotate((t.rotation * Math.PI) / 180);
+            ctx.fillStyle = '#00ffcc';
+            ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+            ctx.restore();
         }
 
-        // 장애물 업데이트 및 충돌 검사
+        // 2. 상대방(고스트) 그리기
+        if (isMultiplayer && peerPlayer.active) {
+            drawCube(peerPlayer, '#ffeb3b', true); // 노란색 반투명
+        }
+        
+        drawCube(player, '#00ffcc');
+
+        // 3. 장애물 생성 (호스트 또는 솔로일 때만 결정)
+        if ((isHost || !isMultiplayer) && frame >= nextSpawnFrame) {
+            const newObs = new Obstacle();
+            obstacles.push(newObs);
+            
+            // 멀티플레이 호스트라면 클라이언트에게 장애물 정보 전송
+            if (isHost && conn) {
+                conn.send({ 
+                    type: 'spawn', 
+                    obsData: { x: newObs.x, y: newObs.y, w: newObs.width, h: newObs.height, type: newObs.drawType } 
+                });
+            }
+
+            // 겹침 방지: 최소 간격을 랜덤하게 설정 (속도에 비례)
+            nextSpawnFrame = frame + Math.floor(Math.random() * 40 + (1000 / gameSpeed));
+        }
+
+        // 4. 장애물 업데이트 및 충돌 검사
         for (let i = 0; i < obstacles.length; i++) {
             let obs = obstacles[i];
             obs.update();
 
-            // 충돌 시 게임 오버
-            if (checkCollision(player, obs)) {
-                gameOver();
-                return;
+            if (!player.dead && checkCollision(player, obs)) {
+                player.dead = true;
             }
 
-            // 화면 밖으로 나간 장애물 제거 및 점수 획득
             if (obs.x + obs.width < 0) {
                 obstacles.splice(i, 1);
-                score += 10;
+                if (!player.dead) score += 10;
                 i--;
             }
         }
 
-        // 점수 표시
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.font = '20px "Press Start 2P"';
-        ctx.fillText(`SCORE: ${score}`, 20, 40);
+        // 5. 네트워크 데이터 동기화 (프레임마다 내 위치 전송)
+        if (isMultiplayer && conn && frame % 2 === 0) { // 트래픽 최적화를 위해 2프레임마다
+            conn.send({ type: 'sync', y: player.y, rotation: player.rotation, dead: player.dead });
+        }
 
-        // 시간이 지날수록 난이도(속도) 증가
-        if (frame % 500 === 0 && gameSpeed < 12) {
-            gameSpeed += 0.5;
+        // 점수 및 UI 업데이트
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.font = '16px "Press Start 2P"';
+        ctx.fillText(`SCORE: ${score}`, 20, 30);
+        
+        if (frame % 300 === 0 && gameSpeed < 15) gameSpeed += 0.5; // 속도 서서히 증가
+
+        // 게임 오버 조건 체크
+        if (player.dead) {
+            if (!isMultiplayer) {
+                gameOver("GAME OVER"); return;
+            } else if (isMultiplayer && peerPlayer.dead) {
+                gameOver("DRAW!"); return;
+            }
+            // 멀티에서는 내가 죽어도 상대가 살아있으면 관전
+            ctx.fillStyle = '#ff0055';
+            ctx.fillText("WAITING FOR PEER...", canvas.width/2 - 120, canvas.height/2);
         }
 
         frame++;
         animationId = requestAnimationFrame(animate);
     }
 
-    // 게임 시작
     function startGame() {
+        if (isHost && conn) conn.send({ type: 'start' }); // 클라이언트에게 시작 신호
+        
         lobby.classList.add('hidden');
         gameOverScreen.classList.add('hidden');
         initGame();
@@ -323,21 +466,25 @@
         animate();
     }
 
-    // 게임 오버
-    function gameOver() {
+    function gameOver(msg) {
         isPlaying = false;
         cancelAnimationFrame(animationId);
-        finalScoreText.innerText = `Score: ${score}`;
+        resultTitle.innerText = msg;
+        finalScoreText.innerText = `Final Score: ${score}`;
         gameOverScreen.classList.remove('hidden');
     }
 
-    // 이벤트 리스너 등록
-    startBtn.addEventListener('click', startGame);
-    restartBtn.addEventListener('click', startGame);
+    // 로비로 돌아가기
+    lobbyBtn.addEventListener('click', () => {
+        gameOverScreen.classList.add('hidden');
+        lobby.classList.remove('hidden');
+        statusMsg.innerText = "";
+    });
 
-    // 초기 화면용 배경만 렌더링
+    // 시작 시 PeerJS 초기화 및 배경 렌더링
+    initPeer();
     drawBackground();
 
 </script>
 </body>
-    </html>
+</html>
