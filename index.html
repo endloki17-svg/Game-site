@@ -3,464 +3,363 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geometry Dash - Online Multiplayer</title>
-    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+    <title>Geometry Dash - Full Features</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
         body {
-            margin: 0; padding: 0; background-color: #0b0b1a; color: #fff;
+            margin: 0; background-color: #111; color: #fff;
             font-family: 'Press Start 2P', cursive;
             display: flex; justify-content: center; align-items: center; height: 100vh;
             overflow: hidden; user-select: none;
         }
 
         #game-container {
-            position: relative; width: 800px; height: 450px;
-            box-shadow: 0 0 30px rgba(0, 255, 204, 0.3);
-            background: linear-gradient(to bottom, #10102b, #1a1a3a);
+            position: relative; width: 800px; height: 400px;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.5);
+            background: linear-gradient(to bottom, #1a1a2e, #16213e);
             overflow: hidden;
         }
 
         .screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            background-color: rgba(0, 0, 0, 0.85); z-index: 10; backdrop-filter: blur(5px);
+            background-color: rgba(0, 0, 0, 0.7); z-index: 10;
         }
 
-        h1 { color: #00ffcc; text-shadow: 3px 3px 0px #ff0055; font-size: 32px; margin-bottom: 20px; }
-        h2 { color: #fff; font-size: 16px; margin-bottom: 20px; }
-
-        .panel { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 20px;}
+        h1 { color: #00ffcc; text-shadow: 2px 2px 0px #ff0055; font-size: 32px; margin-bottom: 20px; }
         
-        input {
-            padding: 10px; font-family: 'Press Start 2P', cursive; font-size: 12px;
-            margin-bottom: 15px; width: 250px; text-align: center; border: 2px solid #00ffcc;
-            background: #111; color: #00ffcc; outline: none;
-        }
-
         button {
-            padding: 15px 20px; font-family: 'Press Start 2P', cursive; font-size: 14px;
-            color: #fff; background-color: #ff0055; border: 3px solid #fff;
-            cursor: pointer; transition: transform 0.1s, background-color 0.2s;
-            margin: 5px;
+            padding: 15px 30px; font-family: 'Press Start 2P', cursive; font-size: 16px;
+            color: #fff; background-color: #ff0055; border: 4px solid #fff; cursor: pointer;
         }
         button:hover { background-color: #ff3377; transform: scale(1.05); }
-        button:active { transform: scale(0.95); }
-        button:disabled { background-color: #555; border-color: #777; cursor: not-allowed; transform: none; }
 
         canvas { display: block; }
         .hidden { display: none !important; }
-        
-        #status-msg { color: #ffeb3b; font-size: 10px; margin-top: 15px; height: 15px; }
+        .controls { font-size: 10px; color: #aaa; margin-top: 20px; text-align: center; line-height: 1.5; }
     </style>
 </head>
 <body>
 
 <div id="game-container">
     <div id="lobby" class="screen">
-        <h1>GEO-DASH ONLINE</h1>
-        
-        <div class="panel">
-            <h2>내 ID: <span id="my-id">생성 중...</span></h2>
-            <button id="host-btn" disabled>방 만들기 (Host)</button>
+        <h1>GEO-DASH</h1>
+        <button id="start-btn">START STAGE</button>
+        <div class="controls">
+            [조작법]<br>
+            마우스 클릭 또는 스페이스바 누르기<br>
+            - 큐브: 점프<br>
+            - 비행기(Ship): 누르고 있으면 상승<br>
+            - 웨이브(Wave): 누르면 대각선 상승, 떼면 대각선 하락
         </div>
-
-        <div class="panel">
-            <input type="text" id="target-id" placeholder="친구 ID 입력">
-            <br>
-            <button id="join-btn" disabled>접속하기 (Join)</button>
-        </div>
-        
-        <button id="solo-btn" style="background-color: #00ffcc; color: #000; border-color: #000;">솔로 플레이</button>
-        <p id="status-msg"></p>
     </div>
 
     <div id="game-over" class="screen hidden">
         <h1 id="result-title">CRASHED!</h1>
-        <p id="final-score" style="margin-bottom: 30px; color: #ffeb3b; font-size: 18px;">Score: 0</p>
-        <button id="lobby-btn">로비로 돌아가기</button>
+        <p id="progress-text" style="color: #ffeb3b; margin-bottom: 30px;">Progress: 0%</p>
+        <button id="restart-btn">RETRY</button>
     </div>
 
-    <canvas id="gameCanvas" width="800" height="450"></canvas>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
 </div>
 
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+    const uiLobby = document.getElementById('lobby');
+    const uiGameOver = document.getElementById('game-over');
+    const uiResultTitle = document.getElementById('result-title');
+    const uiProgress = document.getElementById('progress-text');
 
-    // UI 엘리먼트
-    const lobby = document.getElementById('lobby');
-    const gameOverScreen = document.getElementById('game-over');
-    const myIdDisplay = document.getElementById('my-id');
-    const targetIdInput = document.getElementById('target-id');
-    const hostBtn = document.getElementById('host-btn');
-    const joinBtn = document.getElementById('join-btn');
-    const soloBtn = document.getElementById('solo-btn');
-    const lobbyBtn = document.getElementById('lobby-btn');
-    const statusMsg = document.getElementById('status-msg');
-    const resultTitle = document.getElementById('result-title');
-    const finalScoreText = document.getElementById('final-score');
-
-    // 게임 상태 변수
+    // 게임 설정
+    const BLOCK_SIZE = 40;
+    let gameSpeed = 7;
     let isPlaying = false;
+    let isHolding = false;
     let animationId;
-    let frame = 0;
-    let score = 0;
-    let gameSpeed = 8; // 속도 증가로 시원한 느낌
-    let bgOffset = 0;
+    let cameraX = 0;
 
-    // 플레이어 물리 상수 (훨씬 빠르고 즉각적인 반응성)
-    const GRAVITY = 1.2;
-    const JUMP_POWER = -16;
-    const GROUND_HEIGHT = 60;
-    const FLOOR_Y = canvas.height - GROUND_HEIGHT;
+    // 플레이어 상태
+    const player = {
+        x: 150, y: 0, size: 30, dy: 0,
+        mode: 'cube', // cube, ship, wave
+        gravity: 1, // 1 (normal), -1 (inverted)
+        rotation: 0, grounded: false, dead: false
+    };
 
-    // 내 캐릭터
-    const player = { x: 100, y: FLOOR_Y - 30, size: 30, dy: 0, grounded: true, rotation: 0, dead: false };
-    
-    // 잔상(Trail) 배열
-    let trails = [];
+    // 스테이지 디자인 배열 (20행, 각 문자 1블록)
+    // . = 빈공간 / X = 벽,바닥 / ^, v = 가시
+    // S = 비행기 포탈 / C = 큐브 포탈 / W = 웨이브 포탈
+    // U = 중력 반전 포탈 / D = 정상 중력 포탈 / F = 도착 지점
+    const levelMap = [
+        "........................................................................................................................................................................................................",
+        "........................................................................................................................................................................................................",
+        "..................................................................................................XXXXXXXXXXXXX...XXXXXXXXXX............................................................................",
+        "..........................................................XXXXXXXXXXXXXXXXXXXX....................X...........X...X........X............................................................................",
+        "..........................................................X..................X....................X...v.......X...X........X....................................................X.......................",
+        "..........................................................X.......v..........X...U................X.......v...X...X........X....................v..................W............X.......................",
+        ".................................................S........X..................X....................X...........X...X........X....................................................X.......................",
+        "..........................................................X.............^....X....................X...^.......X...X........X.................C..................................X......F................",
+        "................................XXXXX.....................X...^..............X....................X...........X...X........X...................................X................X.......................",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    ];
 
-    // 멀티플레이 데이터 (상대방 고스트)
-    const peerPlayer = { x: 100, y: FLOOR_Y - 30, size: 30, rotation: 0, active: false, dead: false };
-    
-    // 네트워크 변수
-    let peer = null;
-    let conn = null;
-    let isHost = false;
-    let isMultiplayer = false;
+    let blocks = [], spikes = [], portals = [], finishLine = null;
+    let maxLevelWidth = levelMap[0].length * BLOCK_SIZE;
 
-    // 장애물 배열 및 생성 제어
-    let obstacles = [];
-    let nextSpawnFrame = 60;
-
-    // --- PeerJS 네트워크 설정 ---
-    function initPeer() {
-        peer = new Peer(); // 랜덤 ID 생성
-        
-        peer.on('open', (id) => {
-            myIdDisplay.innerText = id;
-            hostBtn.disabled = false;
-            joinBtn.disabled = false;
-        });
-
-        // 호스트: 누군가 접속했을 때
-        peer.on('connection', (connection) => {
-            conn = connection;
-            setupConnection();
-            isHost = true;
-            statusMsg.innerText = "상대방 접속 완료! 게임을 시작합니다...";
-            setTimeout(startGame, 1500);
-        });
-
-        peer.on('error', (err) => {
-            statusMsg.innerText = "통신 에러: " + err.type;
-        });
-    }
-
-    hostBtn.addEventListener('click', () => {
-        statusMsg.innerText = "친구의 접속을 기다리는 중...";
-        hostBtn.disabled = true; joinBtn.disabled = true; soloBtn.disabled = true;
-    });
-
-    joinBtn.addEventListener('click', () => {
-        const targetId = targetIdInput.value.trim();
-        if(!targetId) return alert("ID를 입력하세요.");
-        statusMsg.innerText = "접속 시도 중...";
-        conn = peer.connect(targetId);
-        
-        conn.on('open', () => {
-            setupConnection();
-            isHost = false;
-            statusMsg.innerText = "접속 성공! 호스트의 시작을 기다립니다...";
-        });
-    });
-
-    // 데이터 송수신 설정
-    function setupConnection() {
-        isMultiplayer = true;
-        peerPlayer.active = true;
-
-        conn.on('data', (data) => {
-            if(data.type === 'start') {
-                startGame();
-            } else if (data.type === 'sync') {
-                // 상대방 위치 실시간 동기화
-                peerPlayer.y = data.y;
-                peerPlayer.rotation = data.rotation;
-                peerPlayer.dead = data.dead;
-            } else if (data.type === 'spawn' && !isHost) {
-                // 호스트가 생성한 장애물을 똑같이 생성
-                obstacles.push(new Obstacle(data.obsData));
-            }
-        });
-    }
-
-    soloBtn.addEventListener('click', () => {
-        isMultiplayer = false; peerPlayer.active = false;
-        startGame();
-    });
-
-    // --- 게임 로직 ---
-
-    // 키 입력 처리 (즉각 반응)
-    function handleInput(e) {
-        if (e.type === 'keydown' && (e.code === 'Space' || e.code === 'ArrowUp')) {
-            e.preventDefault(); // 스크롤 방지
-        }
-        
-        if ((e.type === 'keydown' && (e.code === 'Space' || e.code === 'ArrowUp')) || e.type === 'mousedown') {
-            if (isPlaying && !player.dead && player.grounded) {
-                player.dy = JUMP_POWER;
-                player.grounded = false;
-            }
-        }
-    }
-
-    window.addEventListener('keydown', handleInput, { passive: false });
-    window.addEventListener('mousedown', handleInput);
-
-    function initGame() {
-        player.y = FLOOR_Y - player.size;
-        player.dy = 0; player.rotation = 0; player.grounded = true; player.dead = false;
-        peerPlayer.dead = false;
-        obstacles = []; trails = [];
-        score = 0; frame = 0; gameSpeed = 9; nextSpawnFrame = 60;
-        bgOffset = 0;
-    }
-
-    // 장애물 클래스 (다양화)
-    class Obstacle {
-        constructor(data = null) {
-            if (data) {
-                this.x = data.x; this.y = data.y; this.width = data.w; this.height = data.h; this.type = data.type;
-            } else {
-                this.x = canvas.width;
-                this.type = Math.random();
+    // 맵 파싱 함수
+    function loadLevel() {
+        blocks = []; spikes = []; portals = []; finishLine = null;
+        for (let r = 0; r < levelMap.length; r++) {
+            for (let c = 0; c < levelMap[r].length; c++) {
+                let char = levelMap[r][c];
+                let x = c * BLOCK_SIZE;
+                let y = r * BLOCK_SIZE;
                 
-                if (this.type < 0.5) {
-                    // 일반 가시
-                    this.width = 30; this.height = 35;
-                    this.y = FLOOR_Y - this.height;
-                    this.drawType = 'spike';
-                } else if (this.type < 0.8) {
-                    // 넓은 블록 (공중에 떠있는 방해물)
-                    this.width = 40; this.height = 40;
-                    this.y = FLOOR_Y - this.height - 45; // 점프로 피하거나 아래로 지나가야함
-                    this.drawType = 'block';
+                if (char === 'X') blocks.push({ x, y, size: BLOCK_SIZE });
+                else if (char === '^' || char === 'v') spikes.push({ x, y, size: BLOCK_SIZE, dir: char });
+                else if (char === 'S' || char === 'C' || char === 'W' || char === 'U' || char === 'D') portals.push({ x, y, type: char });
+                else if (char === 'F') finishLine = { x, y };
+            }
+        }
+    }
+
+    // 입력 처리
+    function handleInput(e, state) {
+        if (e.type === 'keydown' && (e.code === 'Space' || e.code === 'ArrowUp')) e.preventDefault();
+        if (e.type === 'keydown' && e.code !== 'Space' && e.code !== 'ArrowUp') return;
+        isHolding = state;
+
+        if (state && !player.dead && isPlaying && player.mode === 'cube' && player.grounded) {
+            player.dy = -13 * player.gravity;
+            player.grounded = false;
+        }
+    }
+    window.addEventListener('keydown', (e) => handleInput(e, true), { passive: false });
+    window.addEventListener('keyup', (e) => handleInput(e, false));
+    window.addEventListener('mousedown', (e) => handleInput(e, true));
+    window.addEventListener('mouseup', (e) => handleInput(e, false));
+
+    // 게임 초기화
+    function initGame() {
+        loadLevel();
+        player.y = 200; player.dy = 0; player.rotation = 0;
+        player.mode = 'cube'; player.gravity = 1;
+        player.dead = false; player.grounded = false;
+        cameraX = 0;
+        isHolding = false;
+    }
+
+    // AABB 충돌 검사
+    function checkAABB(rect1, rect2, padding = 0) {
+        return (
+            rect1.x + padding < rect2.x + rect2.width - padding &&
+            rect1.x + rect1.width - padding > rect2.x + padding &&
+            rect1.y + padding < rect2.y + rect2.height - padding &&
+            rect1.y + rect1.height - padding > rect2.y + padding
+        );
+    }
+
+    function updatePhysics() {
+        if (player.dead) return;
+
+        // 모드별 물리 로직
+        if (player.mode === 'cube') {
+            player.dy += 1.2 * player.gravity; // 큐브 중력
+        } else if (player.mode === 'ship') {
+            if (isHolding) player.dy -= 0.6 * player.gravity;
+            else player.dy += 0.6 * player.gravity;
+            player.dy = Math.max(-8, Math.min(player.dy, 8)); // 속도 제한
+        } else if (player.mode === 'wave') {
+            if (isHolding) player.dy = -8 * player.gravity;
+            else player.dy = 8 * player.gravity;
+        }
+
+        // Y축 이동
+        player.y += player.dy;
+        player.grounded = false;
+        let hitWall = false;
+
+        // 벽 & 바닥 충돌 검사 (블록)
+        const pRect = { x: player.x, y: player.y, width: player.size, height: player.size };
+        
+        for (let b of blocks) {
+            let bRect = { x: b.x - cameraX, y: b.y, width: b.size, height: b.size };
+            if (checkAABB(pRect, bRect)) {
+                // 이전 프레임 위치 기반으로 바닥/천장인지, 벽인지 판별
+                let prevY = player.y - player.dy;
+                if (player.gravity === 1) {
+                    if (player.dy > 0 && prevY + player.size <= bRect.y + 10) { // 바닥 착지
+                        player.y = bRect.y - player.size;
+                        player.dy = 0; player.grounded = true;
+                    } else if (player.dy < 0 && prevY >= bRect.y + bRect.height - 10) { // 천장 충돌
+                        player.y = bRect.y + bRect.height;
+                        player.dy = 0;
+                    } else { hitWall = true; } // 옆면 충돌 (벽)
                 } else {
-                    // 연속 가시 (넓음)
-                    this.width = 60; this.height = 30;
-                    this.y = FLOOR_Y - this.height;
-                    this.drawType = 'wide_spike';
+                    // 중력 반전 상태의 충돌
+                    if (player.dy < 0 && prevY >= bRect.y + bRect.height - 10) { // 역-바닥 착지 (천장)
+                        player.y = bRect.y + bRect.height;
+                        player.dy = 0; player.grounded = true;
+                    } else if (player.dy > 0 && prevY + player.size <= bRect.y + 10) { // 역-천장 충돌 (바닥)
+                        player.y = bRect.y - player.size;
+                        player.dy = 0;
+                    } else { hitWall = true; }
                 }
             }
         }
 
-        draw() {
-            ctx.fillStyle = '#ff0055';
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
+        if (hitWall) die();
 
-            if (this.drawType === 'spike' || this.drawType === 'wide_spike') {
-                ctx.beginPath();
-                ctx.moveTo(this.x + this.width / 2, this.y);
-                ctx.lineTo(this.x + this.width, this.y + this.height);
-                ctx.lineTo(this.x, this.y + this.height);
-                ctx.closePath();
-                ctx.fill(); ctx.stroke();
-            } else if (this.drawType === 'block') {
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-                ctx.strokeRect(this.x, this.y, this.width, this.height);
+        // 화면 밖 추락사 방지
+        if (player.y < -50 || player.y > canvas.height + 50) die();
+
+        // 가시 충돌
+        pRect.y = player.y; // 갱신된 Y 좌표
+        for (let s of spikes) {
+            let sRect = { x: s.x - cameraX, y: s.y, width: s.size, height: s.size };
+            // 가시는 히트박스를 작게 (억울함 방지)
+            if (checkAABB(pRect, sRect, 8)) die();
+        }
+
+        // 포탈 충돌
+        for (let i = 0; i < portals.length; i++) {
+            let pt = portals[i];
+            let ptRect = { x: pt.x - cameraX, y: pt.y, width: BLOCK_SIZE, height: BLOCK_SIZE * 2 }; // 포탈은 길게
+            if (checkAABB(pRect, ptRect)) {
+                if (pt.type === 'S') player.mode = 'ship';
+                if (pt.type === 'C') player.mode = 'cube';
+                if (pt.type === 'W') player.mode = 'wave';
+                if (pt.type === 'U') player.gravity = -1; // 중력 반전
+                if (pt.type === 'D') player.gravity = 1;  // 정상 중력
+                portals.splice(i, 1); // 한 번 먹으면 사라짐
             }
         }
 
-        update() {
-            this.x -= gameSpeed;
-            this.draw();
+        // 골인 지점 체크
+        if (finishLine && finishLine.x - cameraX < player.x) {
+            winGame();
         }
     }
 
-    // 정밀한 AABB 충돌 판정
-    function checkCollision(p, obs) {
-        const padding = 5; // 억울한 죽음 방지용 여백
-        return (
-            p.x + padding < obs.x + obs.width &&
-            p.x + p.size - padding > obs.x &&
-            p.y + padding < obs.y + obs.height &&
-            p.y + p.size - padding > obs.y
-        );
+    function die() {
+        player.dead = true;
+        setTimeout(() => gameOver("CRASHED!"), 50);
     }
 
-    // 화려한 배경 그리기
-    function drawBackground() {
-        // 시차 스크롤 배경 라인
-        bgOffset -= gameSpeed * 0.2;
-        if(bgOffset <= -60) bgOffset = 0;
-        
-        ctx.strokeStyle = 'rgba(0, 255, 204, 0.1)';
-        ctx.lineWidth = 1;
-        for (let i = 0; i <= canvas.width + 60; i += 60) {
-            ctx.beginPath(); ctx.moveTo(i + bgOffset, 0); ctx.lineTo(i + bgOffset, canvas.height); ctx.stroke();
-        }
-
-        // 바닥 패턴
-        ctx.fillStyle = '#111';
-        ctx.fillRect(0, FLOOR_Y, canvas.width, GROUND_HEIGHT);
-        
-        ctx.fillStyle = '#222';
-        for(let i = 0; i < canvas.width; i+=40) {
-            ctx.fillRect(i - (frame * gameSpeed) % 40, FLOOR_Y, 20, GROUND_HEIGHT);
-        }
-
-        ctx.strokeStyle = '#00ffcc'; ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.moveTo(0, FLOOR_Y); ctx.lineTo(canvas.width, FLOOR_Y); ctx.stroke();
-    }
-
-    // 플레이어 그리기 로직 분리
-    function drawCube(p, color, isGhost = false) {
-        if (p.dead) return;
-
-        ctx.save();
-        ctx.translate(p.x + p.size / 2, p.y + p.size / 2);
-        
-        if (!p.grounded && !isGhost) {
-            p.rotation += 8; // 공중 회전
-        } else if (!isGhost) {
-            p.rotation = Math.round(p.rotation / 90) * 90; // 착지 시 스냅
-        }
-        
-        ctx.rotate((p.rotation * Math.PI) / 180);
-        
-        ctx.globalAlpha = isGhost ? 0.3 : 1;
-        ctx.fillStyle = color;
-        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-        
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
-        ctx.strokeRect(-p.size / 2, -p.size / 2, p.size, p.size);
-        
-        ctx.fillStyle = isGhost ? '#555' : '#16213e';
-        ctx.fillRect(-p.size / 4, -p.size / 4, p.size / 2, p.size / 2);
-        
-        ctx.restore();
-    }
-
-    // 게임 루프
-    function animate() {
-        if (!isPlaying) return;
-
+    // 그리기 로직
+    function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawBackground();
 
-        // 1. 내 플레이어 물리 처리
-        if (!player.dead) {
-            player.dy += GRAVITY;
-            player.y += player.dy;
-
-            if (player.y + player.size >= FLOOR_Y) {
-                player.y = FLOOR_Y - player.size;
-                player.dy = 0;
-                player.grounded = true;
-            } else {
-                player.grounded = false;
-            }
-
-            // 잔상 효과 (프레임마다 추가)
-            if (frame % 3 === 0) {
-                trails.push({x: player.x, y: player.y, rotation: player.rotation, alpha: 0.5});
-            }
+        // 배경 그리드 (시차 스크롤)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        for (let i = 0; i < canvas.width; i += 40) {
+            ctx.beginPath(); ctx.moveTo(i - (cameraX * 0.5 % 40), 0); ctx.lineTo(i - (cameraX * 0.5 % 40), canvas.height); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
         }
 
-        // 잔상 렌더링
-        for(let i=0; i<trails.length; i++) {
-            let t = trails[i];
-            t.x -= gameSpeed; // 맵과 함께 뒤로 밀림
-            t.alpha -= 0.05;
-            if(t.alpha <= 0) { trails.splice(i, 1); i--; continue; }
+        // 블록 그리기
+        ctx.fillStyle = '#111'; ctx.strokeStyle = '#00ffcc'; ctx.lineWidth = 2;
+        for (let b of blocks) {
+            if (b.x - cameraX > canvas.width || b.x - cameraX < -BLOCK_SIZE) continue;
+            ctx.fillRect(b.x - cameraX, b.y, b.size, b.size);
+            ctx.strokeRect(b.x - cameraX, b.y, b.size, b.size);
+        }
+
+        // 가시 그리기
+        ctx.fillStyle = '#ff0055'; ctx.strokeStyle = '#fff';
+        for (let s of spikes) {
+            if (s.x - cameraX > canvas.width || s.x - cameraX < -BLOCK_SIZE) continue;
+            ctx.beginPath();
+            if (s.dir === '^') {
+                ctx.moveTo(s.x - cameraX + s.size / 2, s.y);
+                ctx.lineTo(s.x - cameraX + s.size, s.y + s.size);
+                ctx.lineTo(s.x - cameraX, s.y + s.size);
+            } else {
+                ctx.moveTo(s.x - cameraX, s.y);
+                ctx.lineTo(s.x - cameraX + s.size, s.y);
+                ctx.lineTo(s.x - cameraX + s.size / 2, s.y + s.size);
+            }
+            ctx.closePath(); ctx.fill(); ctx.stroke();
+        }
+
+        // 포탈 그리기
+        for (let pt of portals) {
+            if (pt.x - cameraX > canvas.width || pt.x - cameraX < -BLOCK_SIZE) continue;
+            ctx.lineWidth = 4;
+            if (pt.type === 'S') ctx.strokeStyle = '#ff00ff'; // 비행기 핑크
+            if (pt.type === 'C') ctx.strokeStyle = '#00ff00'; // 큐브 초록
+            if (pt.type === 'W') ctx.strokeStyle = '#00ffff'; // 웨이브 하늘색
+            if (pt.type === 'U') ctx.strokeStyle = '#ffff00'; // 반전 중력 노랑
+            if (pt.type === 'D') ctx.strokeStyle = '#0000ff'; // 정상 중력 파랑
             
+            ctx.beginPath();
+            ctx.ellipse(pt.x - cameraX + BLOCK_SIZE/2, pt.y + BLOCK_SIZE, 15, BLOCK_SIZE, 0, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // 도착 지점 그리기
+        if (finishLine) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.fillRect(finishLine.x - cameraX, 0, 10, canvas.height);
+        }
+
+        // 플레이어 그리기
+        if (!player.dead) {
             ctx.save();
-            ctx.globalAlpha = t.alpha;
-            ctx.translate(t.x + player.size/2, t.y + player.size/2);
-            ctx.rotate((t.rotation * Math.PI) / 180);
-            ctx.fillStyle = '#00ffcc';
-            ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+            ctx.translate(player.x + player.size / 2, player.y + player.size / 2);
+
+            // 모드별 회전 및 형태
+            if (player.mode === 'cube') {
+                if (!player.grounded) player.rotation += 8 * player.gravity;
+                else player.rotation = Math.round(player.rotation / 90) * 90;
+                ctx.rotate((player.rotation * Math.PI) / 180);
+                
+                ctx.fillStyle = player.gravity === 1 ? '#00ffcc' : '#ffff00';
+                ctx.fillRect(-player.size / 2, -player.size / 2, player.size, player.size);
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+                ctx.strokeRect(-player.size / 2, -player.size / 2, player.size, player.size);
+            } 
+            else if (player.mode === 'ship') {
+                // 진행 방향에 따라 살짝 기울어짐
+                ctx.rotate((player.dy * 2 * Math.PI) / 180);
+                ctx.fillStyle = '#ff00ff';
+                ctx.beginPath();
+                ctx.moveTo(player.size/2, 0); ctx.lineTo(-player.size/2, -player.size/2); ctx.lineTo(-player.size/2, player.size/2);
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+            }
+            else if (player.mode === 'wave') {
+                // 위아래 45도 기울기
+                let targetAngle = (player.dy < 0 ? -45 : 45) * player.gravity;
+                ctx.rotate((targetAngle * Math.PI) / 180);
+                ctx.fillStyle = '#00ffff';
+                ctx.beginPath();
+                ctx.moveTo(player.size/2, 0); ctx.lineTo(-player.size/2, -player.size/3); ctx.lineTo(-player.size/2, player.size/3);
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+            }
             ctx.restore();
         }
 
-        // 2. 상대방(고스트) 그리기
-        if (isMultiplayer && peerPlayer.active) {
-            drawCube(peerPlayer, '#ffeb3b', true); // 노란색 반투명
-        }
+        // UI 표시
+        let progress = Math.min(100, Math.floor(((player.x + cameraX) / maxLevelWidth) * 100));
+        ctx.fillStyle = '#fff'; ctx.font = '14px "Press Start 2P"';
+        ctx.fillText(`Progress: ${progress}%`, 20, 30);
+    }
+
+    function animate() {
+        if (!isPlaying) return;
         
-        drawCube(player, '#00ffcc');
+        if (!player.dead) cameraX += gameSpeed; // 카메라(맵) 우측으로 스크롤
+        updatePhysics();
+        draw();
 
-        // 3. 장애물 생성 (호스트 또는 솔로일 때만 결정)
-        if ((isHost || !isMultiplayer) && frame >= nextSpawnFrame) {
-            const newObs = new Obstacle();
-            obstacles.push(newObs);
-            
-            // 멀티플레이 호스트라면 클라이언트에게 장애물 정보 전송
-            if (isHost && conn) {
-                conn.send({ 
-                    type: 'spawn', 
-                    obsData: { x: newObs.x, y: newObs.y, w: newObs.width, h: newObs.height, type: newObs.drawType } 
-                });
-            }
-
-            // 겹침 방지: 최소 간격을 랜덤하게 설정 (속도에 비례)
-            nextSpawnFrame = frame + Math.floor(Math.random() * 40 + (1000 / gameSpeed));
-        }
-
-        // 4. 장애물 업데이트 및 충돌 검사
-        for (let i = 0; i < obstacles.length; i++) {
-            let obs = obstacles[i];
-            obs.update();
-
-            if (!player.dead && checkCollision(player, obs)) {
-                player.dead = true;
-            }
-
-            if (obs.x + obs.width < 0) {
-                obstacles.splice(i, 1);
-                if (!player.dead) score += 10;
-                i--;
-            }
-        }
-
-        // 5. 네트워크 데이터 동기화 (프레임마다 내 위치 전송)
-        if (isMultiplayer && conn && frame % 2 === 0) { // 트래픽 최적화를 위해 2프레임마다
-            conn.send({ type: 'sync', y: player.y, rotation: player.rotation, dead: player.dead });
-        }
-
-        // 점수 및 UI 업데이트
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.font = '16px "Press Start 2P"';
-        ctx.fillText(`SCORE: ${score}`, 20, 30);
-        
-        if (frame % 300 === 0 && gameSpeed < 15) gameSpeed += 0.5; // 속도 서서히 증가
-
-        // 게임 오버 조건 체크
-        if (player.dead) {
-            if (!isMultiplayer) {
-                gameOver("GAME OVER"); return;
-            } else if (isMultiplayer && peerPlayer.dead) {
-                gameOver("DRAW!"); return;
-            }
-            // 멀티에서는 내가 죽어도 상대가 살아있으면 관전
-            ctx.fillStyle = '#ff0055';
-            ctx.fillText("WAITING FOR PEER...", canvas.width/2 - 120, canvas.height/2);
-        }
-
-        frame++;
         animationId = requestAnimationFrame(animate);
     }
 
     function startGame() {
-        if (isHost && conn) conn.send({ type: 'start' }); // 클라이언트에게 시작 신호
-        
-        lobby.classList.add('hidden');
-        gameOverScreen.classList.add('hidden');
+        uiLobby.classList.add('hidden');
+        uiGameOver.classList.add('hidden');
         initGame();
         isPlaying = true;
         animate();
@@ -469,21 +368,19 @@
     function gameOver(msg) {
         isPlaying = false;
         cancelAnimationFrame(animationId);
-        resultTitle.innerText = msg;
-        finalScoreText.innerText = `Final Score: ${score}`;
-        gameOverScreen.classList.remove('hidden');
+        uiResultTitle.innerText = msg;
+        let progress = Math.min(100, Math.floor(((player.x + cameraX) / maxLevelWidth) * 100));
+        uiProgress.innerText = `Progress: ${progress}%`;
+        uiGameOver.classList.remove('hidden');
     }
 
-    // 로비로 돌아가기
-    lobbyBtn.addEventListener('click', () => {
-        gameOverScreen.classList.add('hidden');
-        lobby.classList.remove('hidden');
-        statusMsg.innerText = "";
-    });
+    function winGame() {
+        gameOver("LEVEL CLEARED!");
+        uiResultTitle.style.color = "#00ffcc";
+    }
 
-    // 시작 시 PeerJS 초기화 및 배경 렌더링
-    initPeer();
-    drawBackground();
+    document.getElementById('start-btn').addEventListener('click', startGame);
+    document.getElementById('restart-btn').addEventListener('click', startGame);
 
 </script>
 </body>
