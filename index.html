@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geometry Dash - Full Online Multiplayer</title>
+    <title>Geometry Dash - Stereo Madness</title>
     <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -16,9 +16,9 @@
         }
 
         #game-container {
-            position: relative; width: 800px; height: 400px;
-            box-shadow: 0 0 30px rgba(0, 255, 204, 0.4);
-            background: linear-gradient(to bottom, #10102b, #1a1a3a);
+            position: relative; width: 800px; height: 450px;
+            box-shadow: 0 0 30px rgba(0, 150, 255, 0.4);
+            background: linear-gradient(to bottom, #115, #112);
             overflow: hidden;
         }
 
@@ -45,48 +45,38 @@
             cursor: pointer; transition: transform 0.1s, background-color 0.2s; margin: 5px;
         }
         button:hover { background-color: #ff3377; transform: scale(1.05); }
-        button:disabled { background-color: #555; border-color: #777; cursor: not-allowed; transform: none; }
+        button:disabled { background-color: #555; border-color: #777; cursor: not-allowed; }
 
         canvas { display: block; }
         .hidden { display: none !important; }
         #status-msg { color: #ffeb3b; font-size: 10px; margin-top: 15px; height: 15px; }
-        
-        .controls { font-size: 9px; color: #aaa; margin-top: 15px; text-align: center; line-height: 1.8; }
     </style>
 </head>
 <body>
 
 <div id="game-container">
     <div id="lobby" class="screen">
-        <h1>GEO-DASH<br>MULTIPLAYER</h1>
-        
+        <h1>STEREO MADNESS<br>EDITION</h1>
         <div class="panel">
             <h2>내 ID: <span id="my-id">생성 중...</span></h2>
             <button id="host-btn" disabled>방 만들기 (Host)</button>
         </div>
-
         <div class="panel">
             <input type="text" id="target-id" placeholder="친구 ID 입력">
             <br>
             <button id="join-btn" disabled>접속하기 (Join)</button>
         </div>
-        
         <button id="solo-btn" style="background-color: #00ffcc; color: #000; border-color: #000;">솔로 플레이</button>
         <p id="status-msg"></p>
-
-        <div class="controls">
-            [조작] 클릭 또는 스페이스바<br>
-            큐브: 점프 / 비행기(Ship): 누르고 있으면 상승 / 배(Wave): 대각선 비행
-        </div>
     </div>
 
     <div id="game-over" class="screen hidden">
         <h1 id="result-title">CRASHED!</h1>
         <p id="progress-text" style="color: #ffeb3b; margin-bottom: 30px; font-size: 16px;">Progress: 0%</p>
-        <button id="lobby-btn">로비로 돌아가기</button>
+        <button id="lobby-btn">다시 하기</button>
     </div>
 
-    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <canvas id="gameCanvas" width="800" height="450"></canvas>
 </div>
 
 <script>
@@ -94,38 +84,34 @@
     const ctx = canvas.getContext('2d');
     const uiLobby = document.getElementById('lobby');
     const uiGameOver = document.getElementById('game-over');
-    const statusMsg = document.getElementById('status-msg');
 
-    // 게임 변수
     const BLOCK_SIZE = 40;
-    let gameSpeed = 7;
+    let gameSpeed = 7.5;
     let isPlaying = false;
     let isHolding = false;
-    let animationId;
-    let cameraX = 0;
-    let frame = 0;
+    let animationId, cameraX = 0, frame = 0;
 
-    // 플레이어 (나)
-    const player = { x: 150, y: 0, size: 30, dy: 0, mode: 'cube', gravity: 1, rotation: 0, grounded: false, dead: false };
-    
-    // 플레이어 (온라인 상대방)
-    const peerPlayer = { active: false, camX: 0, y: 0, rot: 0, mode: 'cube', grav: 1, dead: false };
-
-    // 네트워크 변수
+    // 플레이어
+    const player = { x: 150, y: 0, size: 30, dy: 0, mode: 'cube', rotation: 0, grounded: false, dead: false };
+    const peerPlayer = { active: false, camX: 0, y: 0, rot: 0, mode: 'cube', dead: false };
     let peer = null, conn = null, isHost = false, isMultiplayer = false;
 
-    // 맵 디자인 (S:비행기, C:큐브, W:웨이브, U:중력반전, D:정상중력, F:도착, ^v:가시, X:벽/바닥)
+    // Stereo Madness (Stage 1) 근사치 맵 데이터
     const levelMap = [
-        "........................................................................................................................................................................................................",
-        "........................................................................................................................................................................................................",
-        "..................................................................................................XXXXXXXXXXXXX...XXXXXXXXXX............................................................................",
-        "..........................................................XXXXXXXXXXXXXXXXXXXX....................X...........X...X........X............................................................................",
-        "..........................................................x......................................X...v.......X...X........X....................................................X.......................",
-        ".................................................................v.............U................X.......v...X...X........X....................v..................W............X.......................",
-        ".................................................S..............................................X...........X...X........X....................................................X.......................",
-        ".......................................................................^........................X...^.......X...X........X.................C..................................X......F................",
-        "................................XXXXX........................^..................................X...........X...X........X...................................X................X.......................",
-        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        ".......................................................................................................................................................................................................................................................................................................................................................................................",
+        ".......................................................................................................................................................................................................................................................................................................................................................................................",
+        ".......................................................................................................................................................................................................................................................................................................................................................................................",
+        ".......................................................................................................................................................................................................................................................................................................................................................................................",
+        "........................................................................................................................XXXXXXXXXXXXXXXXXXXX.......................................................................................................................................................................................................................................",
+        "........................................................................................................................X..................X.......................................................................................................................................................................................................................................",
+        "................................................................................................................S.......X..................X.......................................................................................................................................................................................................................................",
+        ".....................................................................XXXX...............................................X...X........X.....X.......................................................................................................................................................................................................................................",
+        "...........................................................XXXX......XXXX...............................................X...X........X.....X..........X........................................................................................................................................................................................................................",
+        ".................................................XXXX......XXXX......XXXX...............................................X...X........X.....X..........X........................................................................................................................................................................................................................",
+        ".......................................XXXX......XXXX......XXXX......XXXX...............................................X...X........X.....X..........X........................................C...............................................................................................................................................................................",
+        ".......................................XXXX......XXXX......XXXX......XXXX...............................................X.............................X.......................................................................^..^..^.........................................................................................................................................F",
+        ".......................^.........^.....XXXX..^...XXXX..^...XXXX..^...XXXX........^..^.........^..^..^...................X.............................X...................................XXXXXXX...XXXXX..................................X....X....X.........................................................................................................................",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
     ];
 
     let blocks = [], spikes = [], portals = [], finishLine = null;
@@ -137,55 +123,40 @@
             for (let c = 0; c < levelMap[r].length; c++) {
                 let char = levelMap[r][c];
                 let x = c * BLOCK_SIZE, y = r * BLOCK_SIZE;
-                
                 if (char === 'X') blocks.push({ x, y, size: BLOCK_SIZE });
-                else if (char === '^' || char === 'v') spikes.push({ x, y, size: BLOCK_SIZE, dir: char });
-                else if (['S', 'C', 'W', 'U', 'D'].includes(char)) portals.push({ x, y, type: char });
+                else if (char === '^') spikes.push({ x, y, size: BLOCK_SIZE });
+                else if (char === 'S' || char === 'C' || char === 'W') portals.push({ x, y, type: char });
                 else if (char === 'F') finishLine = { x, y };
             }
         }
     }
 
-    // --- 네트워크 설정 (PeerJS) ---
+    // --- 네트워크(PeerJS) ---
     function initPeer() {
         peer = new Peer();
-        peer.on('open', (id) => {
+        peer.on('open', id => {
             document.getElementById('my-id').innerText = id;
-            document.getElementById('host-btn').disabled = false;
-            document.getElementById('join-btn').disabled = false;
+            document.getElementById('host-btn').disabled = false; document.getElementById('join-btn').disabled = false;
         });
-
-        peer.on('connection', (connection) => {
-            conn = connection; setupConnection(); isHost = true;
-            statusMsg.innerText = "상대방 접속 완료! 1.5초 후 시작합니다.";
-            setTimeout(startGame, 1500);
+        peer.on('connection', c => {
+            conn = c; setupConnection(); isHost = true;
+            setTimeout(startGame, 1000);
         });
     }
 
-    document.getElementById('host-btn').addEventListener('click', (e) => {
-        statusMsg.innerText = "상대방 기다리는 중...";
-        e.target.disabled = true; document.getElementById('join-btn').disabled = true;
-    });
-
+    document.getElementById('host-btn').addEventListener('click', e => { e.target.disabled = true; document.getElementById('join-btn').disabled = true; });
     document.getElementById('join-btn').addEventListener('click', () => {
-        const target = document.getElementById('target-id').value.trim();
-        if(!target) return;
-        statusMsg.innerText = "접속 중...";
-        conn = peer.connect(target);
-        conn.on('open', () => {
-            setupConnection(); isHost = false;
-            statusMsg.innerText = "접속 성공! 방장의 시작을 기다립니다.";
-        });
+        let t = document.getElementById('target-id').value.trim();
+        if(t) { conn = peer.connect(t); conn.on('open', () => { setupConnection(); isHost = false; }); }
     });
 
     function setupConnection() {
         isMultiplayer = true; peerPlayer.active = true;
-        conn.on('data', (data) => {
-            if(data.type === 'start') startGame();
-            else if (data.type === 'sync') {
-                peerPlayer.camX = data.camX; peerPlayer.y = data.y;
-                peerPlayer.rot = data.rot; peerPlayer.mode = data.mode;
-                peerPlayer.grav = data.grav; peerPlayer.dead = data.dead;
+        conn.on('data', d => {
+            if(d.type === 'start') startGame();
+            else if(d.type === 'sync') {
+                peerPlayer.camX = d.camX; peerPlayer.y = d.y;
+                peerPlayer.rot = d.rot; peerPlayer.mode = d.mode; peerPlayer.dead = d.dead;
             }
         });
     }
@@ -194,20 +165,16 @@
         isMultiplayer = false; peerPlayer.active = false; startGame();
     });
 
-    // --- 입력 및 물리 ---
+    // --- 입력 및 물리 엔진 (완전 개편) ---
     function handleInput(e, state) {
         if (e.type === 'keydown' && (e.code === 'Space' || e.code === 'ArrowUp')) e.preventDefault();
         if (e.type === 'keydown' && e.code !== 'Space' && e.code !== 'ArrowUp') return;
         isHolding = state;
-
-        if (state && !player.dead && isPlaying && player.mode === 'cube' && player.grounded) {
-            player.dy = -13 * player.gravity; player.grounded = false;
-        }
     }
-    window.addEventListener('keydown', (e) => handleInput(e, true), { passive: false });
-    window.addEventListener('keyup', (e) => handleInput(e, false));
-    window.addEventListener('mousedown', (e) => handleInput(e, true));
-    window.addEventListener('mouseup', (e) => handleInput(e, false));
+    window.addEventListener('keydown', e => handleInput(e, true), { passive: false });
+    window.addEventListener('keyup', e => handleInput(e, false));
+    window.addEventListener('mousedown', e => handleInput(e, true));
+    window.addEventListener('mouseup', e => handleInput(e, false));
 
     function checkAABB(r1, r2, pad = 0) {
         return (r1.x + pad < r2.x + r2.w - pad && r1.x + r1.w - pad > r2.x + pad &&
@@ -217,17 +184,30 @@
     function updatePhysics() {
         if (player.dead) return;
 
-        // 모드별 물리 법칙
+        // 원작 고증 물리 엔진 적용
         if (player.mode === 'cube') {
-            player.dy += 1.2 * player.gravity;
+            player.dy += 1.3; // 중력
+            if (isHolding && player.grounded) { // 꾹 누르고 있으면 자동 점프 연계
+                player.dy = -13.5;
+                player.grounded = false;
+            }
             player.dy = Math.max(-15, Math.min(player.dy, 15));
+            
+            // 공중 회전 vs 바닥 착지 스냅
+            if (!player.grounded) player.rotation += 6;
+            else player.rotation = Math.round(player.rotation / 90) * 90;
+
         } else if (player.mode === 'ship') {
-            player.dy += (isHolding ? -0.6 : 0.6) * player.gravity;
-            player.dy = Math.max(-8, Math.min(player.dy, 8));
-            player.rotation = player.dy * 2 * player.gravity;
+            // 비행기: 누르면 가속도, 떼면 중력
+            if (isHolding) player.dy -= 0.8; 
+            else player.dy += 0.7;
+            player.dy = Math.max(-7, Math.min(player.dy, 7)); // 속도 제한
+            player.rotation = player.dy * 3; // 속도에 비례해 기체가 위아래로 기울어짐
+
         } else if (player.mode === 'wave') {
-            player.dy = (isHolding ? -9 : 9) * player.gravity;
-            player.rotation = (player.dy < 0 ? -45 : 45) * player.gravity;
+            // 웨이브: 즉각적인 대각선 이동
+            player.dy = isHolding ? -8 : 8;
+            player.rotation = isHolding ? -45 : 45;
         }
 
         player.y += player.dy;
@@ -236,7 +216,7 @@
 
         const pRect = { x: player.x, y: player.y, w: player.size, h: player.size };
 
-        // [버그 수정됨] 견고한 4방향 충돌 판정
+        // 단단한 벽(바닥) 충돌 판정
         for (let b of blocks) {
             let bRect = { x: b.x - cameraX, y: b.y, w: b.size, h: b.size };
             if (checkAABB(pRect, bRect)) {
@@ -247,17 +227,12 @@
 
                 let minOver = Math.min(overLeft, overRight, overTop, overBot);
 
-                if (minOver === overTop && player.gravity === 1) { // 바닥
+                if (minOver === overTop) { 
                     player.y = bRect.y - player.size; player.dy = 0; player.grounded = true;
-                } else if (minOver === overBot && player.gravity === -1) { // 반전 바닥(천장)
-                    player.y = bRect.y + bRect.h; player.dy = 0; player.grounded = true;
-                } else if (minOver === overBot && player.gravity === 1) { // 천장 충돌
+                } else if (minOver === overBot) { 
                     player.y = bRect.y + bRect.h; player.dy = 0;
-                } else if (minOver === overTop && player.gravity === -1) { // 반전 천장 충돌
-                    player.y = bRect.y - player.size; player.dy = 0;
                 } else {
-                    // Y축 겹침이 아주 미세할 때(이음새)는 벽돌진으로 처리하지 않음
-                    if (overTop > 8 && overBot > 8) hitWall = true;
+                    if (overTop > 10 && overBot > 10) hitWall = true;
                 }
                 pRect.y = player.y;
             }
@@ -265,13 +240,13 @@
 
         if (hitWall || player.y < -50 || player.y > canvas.height + 50) die();
 
-        // 가시 충돌 (히트박스 작게)
+        // 가시 충돌 (매우 자비롭게 박스 축소)
         for (let s of spikes) {
-            let sRect = { x: s.x - cameraX, y: s.y, w: s.size, h: s.size };
-            if (checkAABB(pRect, sRect, 10)) die();
+            let sRect = { x: s.x - cameraX, y: s.y + 10, w: s.size, h: s.size - 10 };
+            if (checkAABB(pRect, sRect, 8)) die();
         }
 
-        // 포탈 충돌
+        // 포탈
         for (let i = 0; i < portals.length; i++) {
             let pt = portals[i];
             let ptRect = { x: pt.x - cameraX, y: pt.y, w: BLOCK_SIZE, h: BLOCK_SIZE * 2 };
@@ -279,8 +254,6 @@
                 if (pt.type === 'S') player.mode = 'ship';
                 if (pt.type === 'C') player.mode = 'cube';
                 if (pt.type === 'W') player.mode = 'wave';
-                if (pt.type === 'U') player.gravity = -1;
-                if (pt.type === 'D') player.gravity = 1;
                 portals.splice(i, 1);
             }
         }
@@ -293,35 +266,33 @@
         if (!isMultiplayer) setTimeout(() => gameOver("CRASHED!"), 100);
     }
 
-    // --- 그리기 로직 ---
+    // --- 렌더링 ---
     function drawPlayerShape(p, color, isGhost = false) {
         if (p.dead) return;
         ctx.save();
         ctx.translate(p.x + p.size / 2, p.y + p.size / 2);
+        ctx.rotate((p.rot || p.rotation) * Math.PI / 180);
+        ctx.globalAlpha = isGhost ? 0.3 : 1;
+        ctx.fillStyle = color;
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
 
         if (p.mode === 'cube') {
-            if (!p.grounded && !isGhost) p.rot += 8 * p.grav;
-            else if (!isGhost) p.rot = Math.round(p.rot / 90) * 90;
-            ctx.rotate((p.rot * Math.PI) / 180);
-            
-            ctx.globalAlpha = isGhost ? 0.3 : 1;
-            ctx.fillStyle = color;
             ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
             ctx.strokeRect(-p.size / 2, -p.size / 2, p.size, p.size);
         } else if (p.mode === 'ship') {
-            ctx.rotate((p.rot * Math.PI) / 180);
-            ctx.globalAlpha = isGhost ? 0.3 : 1;
-            ctx.fillStyle = color;
+            // 비행기 모양 (로켓 형태)
             ctx.beginPath();
-            ctx.moveTo(p.size/2, 0); ctx.lineTo(-p.size/2, -p.size/2); ctx.lineTo(-p.size/2, p.size/2);
+            ctx.moveTo(p.size/2 + 10, 0); ctx.lineTo(-p.size/2, -p.size/2.5); ctx.lineTo(-p.size/2, p.size/2.5);
             ctx.closePath(); ctx.fill(); ctx.stroke();
+            // 로켓 분사구 이펙트
+            if(isHolding && !isGhost) {
+                ctx.fillStyle = '#ff9900';
+                ctx.fillRect(-p.size/2 - 15, -5, 15, 10);
+            }
         } else if (p.mode === 'wave') {
-            ctx.rotate((p.rot * Math.PI) / 180);
-            ctx.globalAlpha = isGhost ? 0.3 : 1;
-            ctx.fillStyle = color;
+            // 웨이브 (다트 형태)
             ctx.beginPath();
-            ctx.moveTo(p.size/2, 0); ctx.lineTo(-p.size/2, -p.size/3); ctx.lineTo(-p.size/2, p.size/3);
+            ctx.moveTo(p.size/2 + 5, 0); ctx.lineTo(-p.size/2, -p.size/3); ctx.lineTo(-p.size/2, p.size/3);
             ctx.closePath(); ctx.fill(); ctx.stroke();
         }
         ctx.restore();
@@ -330,37 +301,31 @@
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // 시차 스크롤 배경
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
         for (let i = 0; i < canvas.width; i += 40) {
             ctx.beginPath(); ctx.moveTo(i - (cameraX * 0.5 % 40), 0); ctx.lineTo(i - (cameraX * 0.5 % 40), canvas.height); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
         }
 
-        // 맵 렌더링
-        ctx.fillStyle = '#111'; ctx.strokeStyle = '#00ffcc'; ctx.lineWidth = 2;
+        ctx.fillStyle = '#115'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
         for (let b of blocks) {
             if (b.x - cameraX > canvas.width || b.x - cameraX < -BLOCK_SIZE) continue;
             ctx.fillRect(b.x - cameraX, b.y, b.size, b.size);
             ctx.strokeRect(b.x - cameraX, b.y, b.size, b.size);
         }
 
-        ctx.fillStyle = '#ff0055'; ctx.strokeStyle = '#fff';
+        ctx.fillStyle = '#333'; ctx.strokeStyle = '#fff';
         for (let s of spikes) {
             if (s.x - cameraX > canvas.width || s.x - cameraX < -BLOCK_SIZE) continue;
             ctx.beginPath();
-            if (s.dir === '^') {
-                ctx.moveTo(s.x - cameraX + s.size / 2, s.y); ctx.lineTo(s.x - cameraX + s.size, s.y + s.size); ctx.lineTo(s.x - cameraX, s.y + s.size);
-            } else {
-                ctx.moveTo(s.x - cameraX, s.y); ctx.lineTo(s.x - cameraX + s.size, s.y); ctx.lineTo(s.x - cameraX + s.size / 2, s.y + s.size);
-            }
+            ctx.moveTo(s.x - cameraX + s.size / 2, s.y); ctx.lineTo(s.x - cameraX + s.size, s.y + s.size); ctx.lineTo(s.x - cameraX, s.y + s.size);
             ctx.closePath(); ctx.fill(); ctx.stroke();
         }
 
         for (let pt of portals) {
             if (pt.x - cameraX > canvas.width || pt.x - cameraX < -BLOCK_SIZE) continue;
             ctx.lineWidth = 4;
-            ctx.strokeStyle = pt.type==='S'?'#ff00ff': pt.type==='C'?'#00ff00': pt.type==='W'?'#00ffff': pt.type==='U'?'#ffff00':'#0000ff';
+            ctx.strokeStyle = pt.type==='S'?'#ff00ff': pt.type==='C'?'#00ff00':'#00ffff';
             ctx.beginPath();
             ctx.ellipse(pt.x - cameraX + BLOCK_SIZE/2, pt.y + BLOCK_SIZE, 15, BLOCK_SIZE, 0, 0, Math.PI * 2);
             ctx.stroke();
@@ -371,24 +336,16 @@
             ctx.fillRect(finishLine.x - cameraX, 0, 10, canvas.height);
         }
 
-        // 상대방(고스트) 그리기 (네트워크 동기화 기반)
         if (isMultiplayer && peerPlayer.active) {
             let ghostX = 150 + (peerPlayer.camX - cameraX);
-            drawPlayerShape({ x: ghostX, y: peerPlayer.y, size: 30, rot: peerPlayer.rot, mode: peerPlayer.mode, grav: peerPlayer.grav, dead: peerPlayer.dead }, '#ffeb3b', true);
+            drawPlayerShape({ x: ghostX, y: peerPlayer.y, size: 30, rot: peerPlayer.rot, mode: peerPlayer.mode, dead: peerPlayer.dead }, '#ffeb3b', true);
         }
 
-        // 나 그리기
-        drawPlayerShape({ x: player.x, y: player.y, size: 30, rot: player.rotation, mode: player.mode, grav: player.gravity, dead: player.dead, grounded: player.grounded }, player.gravity === 1 ? '#00ffcc' : '#ffff00', false);
+        drawPlayerShape(player, '#00ffcc', false);
 
-        // 진행도
         let progress = Math.min(100, Math.max(0, Math.floor(((player.x + cameraX) / maxLevelWidth) * 100)));
         ctx.fillStyle = '#fff'; ctx.font = '12px "Press Start 2P"';
         ctx.fillText(`Progress: ${progress}%`, 20, 30);
-        
-        // 멀티플레이 관전 텍스트
-        if (isMultiplayer && player.dead && !peerPlayer.dead) {
-            ctx.fillStyle = '#ff0055'; ctx.fillText("SPECTATING PEER...", canvas.width/2 - 100, 50);
-        }
     }
 
     function animate() {
@@ -398,12 +355,10 @@
         updatePhysics();
         draw();
 
-        // 2프레임마다 내 위치 전송 (네트워크 트래픽 최적화)
         if (isMultiplayer && conn && frame % 2 === 0) {
-            conn.send({ type: 'sync', camX: cameraX, y: player.y, rot: player.rotation, mode: player.mode, grav: player.gravity, dead: player.dead });
+            conn.send({ type: 'sync', camX: cameraX, y: player.y, rot: player.rotation, mode: player.mode, dead: player.dead });
         }
 
-        // 멀티플레이 게임 종료 체크 (둘 다 죽었을 때)
         if (isMultiplayer && player.dead && peerPlayer.dead) gameOver("BOTH CRASHED!");
 
         frame++;
@@ -412,9 +367,8 @@
 
     function initGame() {
         loadLevel();
-        // 안전한 시작 위치 배정
-        player.x = 150; player.y = 320; player.dy = 0; player.rotation = 0;
-        player.mode = 'cube'; player.gravity = 1; player.dead = false; player.grounded = false;
+        player.x = 150; player.y = 350; player.dy = 0; player.rotation = 0;
+        player.mode = 'cube'; player.dead = false; player.grounded = false;
         cameraX = 0; frame = 0; isHolding = false;
     }
 
@@ -427,8 +381,8 @@
     function gameOver(msg) {
         isPlaying = false; cancelAnimationFrame(animationId);
         document.getElementById('result-title').innerText = msg;
-        let progress = Math.min(100, Math.floor(((player.x + cameraX) / maxLevelWidth) * 100));
-        document.getElementById('progress-text').innerText = `Progress: ${progress}%`;
+        let p = Math.min(100, Math.floor(((player.x + cameraX) / maxLevelWidth) * 100));
+        document.getElementById('progress-text').innerText = `Progress: ${p}%`;
         uiGameOver.classList.remove('hidden');
     }
 
@@ -439,11 +393,9 @@
 
     document.getElementById('lobby-btn').addEventListener('click', () => {
         uiGameOver.classList.add('hidden'); uiLobby.classList.remove('hidden');
-        statusMsg.innerText = "";
     });
 
     initPeer();
-
 </script>
 </body>
 </html>
