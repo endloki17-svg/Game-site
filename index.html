@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geometry Dash - Stereo Madness with Music</title>
+    <title>Geometry Dash - Stereo Madness Fix</title>
     <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -16,7 +16,6 @@
         }
 
         #game-container {
-            /* 맵 높이에 맞춰 캔버스 세로 길이를 480px로 수정 */
             position: relative; width: 800px; height: 480px;
             box-shadow: 0 0 30px rgba(0, 150, 255, 0.4);
             background: linear-gradient(to bottom, #115, #112);
@@ -86,7 +85,6 @@
     const uiLobby = document.getElementById('lobby');
     const uiGameOver = document.getElementById('game-over');
 
-    // 🎵 배경음악 세팅 (실제 스테레오 매드니스 음원이 있다면 파일명으로 교체하세요!)
     const bgm = new Audio('https://cdn.pixabay.com/download/audio/2022/01/21/audio_31743c58be.mp3');
     bgm.loop = true;
 
@@ -94,14 +92,13 @@
     let gameSpeed = 7.5;
     let isPlaying = false;
     let isHolding = false;
+    let jumpBuffer = 0; // 🚀 짧은 탭을 기억하는 점프 버퍼
     let animationId, cameraX = 0, frame = 0;
 
-    // 플레이어
     const player = { x: 150, y: 0, size: 30, dy: 0, mode: 'cube', rotation: 0, grounded: false, dead: false };
     const peerPlayer = { active: false, camX: 0, y: 0, rot: 0, mode: 'cube', dead: false };
     let peer = null, conn = null, isHost = false, isMultiplayer = false;
 
-    // 맵 데이터 (총 12행, 마지막 11번 인덱스가 꽉 찬 바닥)
     const levelMap = [
         ".......................................................................................................................................................................................................................................................................................................................................................................................",
         ".......................................................................................................................................................................................................................................................................................................................................................................................",
@@ -134,7 +131,7 @@
         }
     }
 
-    // --- 네트워크(PeerJS) ---
+    // --- 멀티플레이 (PeerJS) ---
     function initPeer() {
         peer = new Peer();
         peer.on('open', id => {
@@ -142,8 +139,7 @@
             document.getElementById('host-btn').disabled = false; document.getElementById('join-btn').disabled = false;
         });
         peer.on('connection', c => {
-            conn = c; setupConnection(); isHost = true;
-            setTimeout(startGame, 1000);
+            conn = c; setupConnection(); isHost = true; setTimeout(startGame, 1000);
         });
     }
 
@@ -168,31 +164,50 @@
         isMultiplayer = false; peerPlayer.active = false; startGame();
     });
 
-    // --- 입력 및 물리 엔진 ---
+    // --- 🚀 입력 로직 (점프 씹힘 완벽 해결) ---
     function handleInput(e, state) {
-        if (e.type === 'keydown' && (e.code === 'Space' || e.code === 'ArrowUp')) e.preventDefault();
-        if (e.type === 'keydown' && e.code !== 'Space' && e.code !== 'ArrowUp') return;
+        // 키보드 필터링
+        if (e.type.startsWith('key')) {
+            if (e.code === 'Space' || e.code === 'ArrowUp') e.preventDefault();
+            else return; 
+        }
+
         isHolding = state;
+        // 누르는 순간 점프 버퍼에 여유 프레임을 주어 짧은 탭(Tap)도 무조건 인식되게 함
+        if (state) jumpBuffer = 10; 
     }
+
     window.addEventListener('keydown', e => handleInput(e, true), { passive: false });
     window.addEventListener('keyup', e => handleInput(e, false));
-    window.addEventListener('mousedown', e => handleInput(e, true));
+    // 마우스 & 모바일 터치 지원 (버튼 누를 땐 제외)
+    window.addEventListener('mousedown', e => { if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') handleInput(e, true); });
     window.addEventListener('mouseup', e => handleInput(e, false));
+    window.addEventListener('touchstart', e => { 
+        if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') { handleInput(e, true); } 
+    }, { passive: false });
+    window.addEventListener('touchend', e => handleInput(e, false));
+
 
     function checkAABB(r1, r2, pad = 0) {
         return (r1.x + pad < r2.x + r2.w - pad && r1.x + r1.w - pad > r2.x + pad &&
                 r1.y + pad < r2.y + r2.h - pad && r1.y + r1.h - pad > r2.y + pad);
     }
 
+    // --- 🚀 물리 엔진 (바닥/벽 충돌 오류 완벽 해결) ---
     function updatePhysics() {
         if (player.dead) return;
 
         if (player.mode === 'cube') {
-            player.dy += 1.3;
-            if (isHolding && player.grounded) {
+            player.dy += 1.3; // 중력
+            
+            // 점프 버퍼를 통해 아주 짧은 입력도 점프로 연결됨
+            if ((isHolding || jumpBuffer > 0) && player.grounded) {
                 player.dy = -13.5;
                 player.grounded = false;
+                jumpBuffer = 0; // 점프 소진
             }
+            if (jumpBuffer > 0) jumpBuffer--;
+
             player.dy = Math.max(-15, Math.min(player.dy, 15));
             if (!player.grounded) player.rotation += 6;
             else player.rotation = Math.round(player.rotation / 90) * 90;
@@ -216,22 +231,27 @@
 
         for (let b of blocks) {
             let bRect = { x: b.x - cameraX, y: b.y, w: b.size, h: b.size };
+            
             if (checkAABB(pRect, bRect)) {
-                let overLeft = (pRect.x + pRect.w) - bRect.x;
-                let overRight = (bRect.x + bRect.w) - pRect.x;
                 let overTop = (pRect.y + pRect.h) - bRect.y;
                 let overBot = (bRect.y + bRect.h) - pRect.y;
 
-                let minOver = Math.min(overLeft, overRight, overTop, overBot);
-
-                if (minOver === overTop) { 
-                    player.y = bRect.y - player.size; player.dy = 0; player.grounded = true;
-                } else if (minOver === overBot) { 
-                    player.y = bRect.y + bRect.h; player.dy = 0;
-                } else {
-                    if (overTop > 10 && overBot > 10) hitWall = true;
+                // 🚀 새 충돌 판정: 아래로 떨어지는 중이고, 겹친 깊이가 16px 이하라면 완벽한 착지로 판정
+                if (player.dy >= 0 && overTop <= 16) {
+                    player.y = bRect.y - player.size;
+                    player.dy = 0;
+                    player.grounded = true;
+                } 
+                // 위로 점프하다가 블록 아랫면(천장)에 부딪힌 경우
+                else if (player.dy < 0 && overBot <= 16) {
+                    player.y = bRect.y + bRect.h;
+                    player.dy = 0;
+                } 
+                // 그 외의 경우는 모두 벽(옆면)에 충돌한 것으로 처리하여 사망
+                else {
+                    hitWall = true;
                 }
-                pRect.y = player.y;
+                pRect.y = player.y; // 바닥 착지 후 남은 블록 검사를 위해 y좌표 갱신
             }
         }
 
@@ -358,10 +378,9 @@
 
     function initGame() {
         loadLevel();
-        // 🚀 바닥 좌표(440px)에 맞춰 플레이어 사이즈(30)만큼 정확히 뺀 410px로 스폰 조정 완!
         player.x = 150; player.y = 410; player.dy = 0; player.rotation = 0;
         player.mode = 'cube'; player.dead = false; player.grounded = true;
-        cameraX = 0; frame = 0; isHolding = false;
+        cameraX = 0; frame = 0; isHolding = false; jumpBuffer = 0;
     }
 
     function startGame() {
@@ -369,14 +388,13 @@
         uiLobby.classList.add('hidden'); uiGameOver.classList.add('hidden');
         initGame(); isPlaying = true; animate();
         
-        // 🎵 음악 재생 (브라우저 정책 상 사용자가 클릭한 이후에만 재생 가능)
         bgm.currentTime = 0;
-        bgm.play().catch(e => console.log("오디오 재생 실패:", e));
+        bgm.play().catch(e => console.log("오디오 재생 대기중"));
     }
 
     function gameOver(msg) {
         isPlaying = false; cancelAnimationFrame(animationId);
-        bgm.pause(); // 음악 정지
+        bgm.pause();
         document.getElementById('result-title').innerText = msg;
         let p = Math.min(100, Math.floor(((player.x + cameraX) / maxLevelWidth) * 100));
         document.getElementById('progress-text').innerText = `Progress: ${p}%`;
