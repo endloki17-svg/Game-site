@@ -1,513 +1,766 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Geometry Dash - Web Edition (Perfect Balance)</title>
-    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>현철 망겜</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap');
+    
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: #111;
+        color: #fff;
+        font-family: 'DungGeunMo', sans-serif;
+        overflow: hidden;
+        user-select: none;
+    }
 
-        body {
-            margin: 0; background-color: #0b0b1a; color: #fff;
-            font-family: 'Press Start 2P', cursive;
-            display: flex; justify-content: center; align-items: center; height: 100vh;
-            overflow: hidden; user-select: none; touch-action: none;
-        }
+    #game-wrapper {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        max-width: 800px;
+        max-height: 600px;
+        margin: 0 auto;
+        background: #222;
+        box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        overflow: hidden;
+    }
 
-        #game-container {
-            position: relative; width: 800px; height: 480px;
-            box-shadow: 0 0 30px rgba(0, 255, 200, 0.4);
-            background: linear-gradient(to bottom, #114, #001);
-            overflow: hidden;
-        }
+    canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        image-rendering: pixelated;
+    }
 
-        .screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            background-color: rgba(0, 0, 0, 0.85); z-index: 10; backdrop-filter: blur(5px);
-        }
+    .screen {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 10;
+        transition: opacity 0.3s;
+    }
 
-        h1 { color: #00ffcc; text-shadow: 3px 3px 0px #ff0055; font-size: 30px; margin-bottom: 10px; text-align: center; line-height: 1.4;}
-        h2 { color: #fff; font-size: 12px; margin-bottom: 15px; }
+    .hidden {
+        display: none !important;
+    }
 
-        .panel { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px;}
-        
-        select, input {
-            padding: 10px; font-family: 'Press Start 2P', cursive; font-size: 12px;
-            margin-bottom: 10px; width: 280px; text-align: center; border: 2px solid #00ffcc;
-            background: #111; color: #00ffcc; outline: none; cursor: pointer;
-        }
+    h1 {
+        font-size: 40px;
+        color: #ff3333;
+        text-shadow: 2px 2px 0 #fff;
+        margin-bottom: 10px;
+        text-align: center;
+    }
 
-        button {
-            padding: 12px 20px; font-family: 'Press Start 2P', cursive; font-size: 12px;
-            color: #fff; background-color: #ff0055; border: 3px solid #fff;
-            cursor: pointer; transition: transform 0.1s, background-color 0.2s; margin: 5px; outline: none;
-        }
-        button:hover { background-color: #ff3377; transform: scale(1.05); }
-        button:disabled { background-color: #555; border-color: #777; cursor: not-allowed; }
+    .btn {
+        background: #333;
+        color: #fff;
+        border: 2px solid #555;
+        padding: 15px 30px;
+        margin: 10px;
+        font-family: inherit;
+        font-size: 20px;
+        cursor: pointer;
+        width: 80%;
+        max-width: 300px;
+        border-radius: 5px;
+        box-sizing: border-box;
+    }
 
-        canvas { display: block; width: 100%; height: 100%; }
-        .hidden { display: none !important; }
-        
-        #result-box { display: flex; gap: 10px; }
-    </style>
+    .btn:active {
+        background: #555;
+        border-color: #fff;
+    }
+
+    .ui-layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 5;
+    }
+
+    .top-bar {
+        position: absolute;
+        top: 0;
+        width: 100%;
+        padding: 10px;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        justify-content: space-between;
+        box-sizing: border-box;
+        font-size: 18px;
+    }
+
+    .bottom-bar {
+        position: absolute;
+        bottom: 0;
+        width: 100%;
+        padding: 10px;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        justify-content: space-around;
+        box-sizing: border-box;
+        pointer-events: auto;
+    }
+
+    .bottom-bar button {
+        background: #444;
+        color: #fff;
+        border: 1px solid #777;
+        padding: 10px;
+        font-family: inherit;
+        font-size: 16px;
+        border-radius: 4px;
+        flex: 1;
+        margin: 0 5px;
+    }
+
+    #math-modal {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #222;
+        border: 3px solid #ffaa00;
+        padding: 20px;
+        width: 90%;
+        max-width: 400px;
+        text-align: center;
+        z-index: 20;
+        pointer-events: auto;
+        border-radius: 10px;
+    }
+
+    .answer-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .answer-btn {
+        background: #444;
+        border: 2px solid #666;
+        color: #fff;
+        padding: 15px;
+        font-size: 18px;
+        font-family: inherit;
+        cursor: pointer;
+    }
+
+    .toast {
+        position: absolute;
+        top: 20%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.8);
+        border: 1px solid #fff;
+        padding: 10px 20px;
+        z-index: 30;
+        animation: fadeOut 2s forwards;
+        pointer-events: none;
+    }
+
+    @keyframes fadeOut {
+        0% { opacity: 1; }
+        70% { opacity: 1; }
+        100% { opacity: 0; display: none; }
+    }
+</style>
 </head>
 <body>
 
-<div id="game-container">
-    <div id="lobby" class="screen">
-        <h1>GEOMETRY DASH<br><span style="font-size: 14px; color:#ffeb3b;">PERFECT BALANCE EDITION</span></h1>
-        
-        <select id="stage-select"></select>
+<div id="game-wrapper">
+    <!-- 캔버스 (게임 화면) -->
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
 
-        <div class="panel" style="display: flex; flex-direction: column; align-items: center;">
-            <button id="solo-btn" style="background-color: #00ffcc; color: #000; border-color: #000; width: 100%;">솔로 플레이 시작</button>
+    <!-- 인게임 UI -->
+    <div id="game-ui" class="ui-layer hidden">
+        <div class="top-bar">
+            <span id="ui-wave">WAVE: 1</span>
+            <span id="ui-gold">💰 150</span>
+            <span id="ui-hp">❤️ 10</span>
         </div>
-
-        <div class="panel">
-            <h2>멀티플레이 (내 ID: <span id="my-id">생성 중...</span>)</h2>
-            <button id="host-btn" disabled>방 만들기</button><br><br>
-            <input type="text" id="target-id" placeholder="친구 ID 입력"><br>
-            <button id="join-btn" disabled>접속하기</button>
-        </div>
-        <p id="status-msg" style="color:#00ffcc; font-size:10px;"></p>
-    </div>
-
-    <div id="game-over" class="screen hidden">
-        <h1 id="result-title">CRASHED!</h1>
-        <p id="progress-text" style="color: #ffeb3b; margin-bottom: 30px; font-size: 16px;">Progress: 0%</p>
-        <div id="result-box">
-            <button id="restart-btn" style="background-color: #00ffcc; color:#000;">다시 시작 (Space)</button>
-            <button id="lobby-btn">로비로</button>
+        <div class="bottom-bar">
+            <button onclick="openSummon()">✨ 소환 (100G)</button>
+            <button onclick="toggleInventory()">🦸 영웅배치 (<span id="inv-count">0</span>)</button>
+            <button onclick="speedUp()">▶ 속도 x<span id="speed-indicator">1</span></button>
         </div>
     </div>
 
-    <canvas id="gameCanvas" width="800" height="480"></canvas>
+    <!-- 타이틀 화면 -->
+    <div id="screen-title" class="screen">
+        <h1>현철 망겜</h1>
+        <p>운빨로 시작해서 실력으로 살아남아라.</p>
+        <button class="btn" onclick="showScreen('screen-mode')">게임 시작</button>
+    </div>
+
+    <!-- 모드 선택 -->
+    <div id="screen-mode" class="screen hidden">
+        <h2>플레이 모드</h2>
+        <button class="btn" onclick="selectMode('student')">학생 모드 (수학 포함)</button>
+        <button class="btn" onclick="selectMode('normal')">일반 모드 (디펜스만)</button>
+        <button class="btn" style="background:#552222" onclick="showScreen('screen-title')">뒤로</button>
+    </div>
+
+    <!-- 수학 단원 선택 -->
+    <div id="screen-math" class="screen hidden">
+        <h2>6학년 수학 단원</h2>
+        <button class="btn" onclick="startGame('분수의 나눗셈')">분수의 나눗셈</button>
+        <button class="btn" onclick="startGame('소수의 나눗셈')">소수의 나눗셈</button>
+        <button class="btn" style="background:#552222" onclick="showScreen('screen-mode')">뒤로</button>
+    </div>
+
+    <!-- 수학 문제 모달 -->
+    <div id="math-modal" class="hidden">
+        <h3 style="color:#ffaa00;">✨ 영웅 소환 문제</h3>
+        <p id="math-question" style="font-size:24px; margin:20px 0;">3/4 ÷ 2/5 = ?</p>
+        <div class="answer-grid" id="math-answers">
+            <!-- 버튼 동적 생성 -->
+        </div>
+    </div>
+
 </div>
 
 <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const uiLobby = document.getElementById('lobby');
-    const uiGameOver = document.getElementById('game-over');
-    const stageSelect = document.getElementById('stage-select');
+/**
+ * 1. 에셋 및 데이터 설정
+ */
+const ASSETS = {
+    // 깃허브 업로드 파일 기준 어둠 테마 매핑
+    hero_base: "animation.gif",      // 기본: 나무검 용사
+    hero_rare1: "animation-10.gif",  // 레어: 어둠의 정찰병
+    hero_rare2: "animation-11.gif",  // 레어: 그림자 암살자
+    hero_legend: "animation-9.gif",  // 레전더리: 심연의 기사
+    hero_secret1: "animation-1.gif", // 시크릿: 칠흑의 마법사
+    hero_secret2: "animation-8.gif", // 시크릿: 망각의 사신
+    hero_eternal: "animation-2.gif"  // 영원함: 공허의 군주
+};
 
-    const bgm = new Audio(); bgm.loop = true; bgm.volume = 0.5;
-    const tunes = [
-        "https://cdn.pixabay.com/download/audio/2021/08/09/audio_6b5c301662.mp3", 
-        "https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3", 
-        "https://cdn.pixabay.com/download/audio/2021/08/04/audio_0625c1539c.mp3", 
-        "https://cdn.pixabay.com/download/audio/2022/03/24/audio_51190bc7dd.mp3", 
-        "https://cdn.pixabay.com/download/audio/2021/09/06/audio_924b17f864.mp3"  
-    ];
+const HERO_DB = [
+    { id: 'base', name: '나무검 용사', tier: '★', color: '#ccc', img: ASSETS.hero_base, dmg: 10, range: 100, speed: 60, prob: 0.50 },
+    { id: 'rare1', name: '어둠의 정찰병', tier: '★★', color: '#55aaff', img: ASSETS.hero_rare1, dmg: 25, range: 120, speed: 50, prob: 0.25 },
+    { id: 'rare2', name: '그림자 암살자', tier: '★★★', color: '#55aaff', img: ASSETS.hero_rare2, dmg: 40, range: 90, speed: 30, prob: 0.15 },
+    { id: 'legend', name: '심연의 기사', tier: '★★★★', color: '#ff55ff', img: ASSETS.hero_legend, dmg: 80, range: 150, speed: 45, prob: 0.06 },
+    { id: 'secret1', name: '칠흑의 마법사', tier: '★★★★★', color: '#ffaa00', img: ASSETS.hero_secret1, dmg: 150, range: 200, speed: 60, prob: 0.025 },
+    { id: 'secret2', name: '망각의 사신', tier: '★★★★★', color: '#ffaa00', img: ASSETS.hero_secret2, dmg: 200, range: 180, speed: 70, prob: 0.013 },
+    { id: 'eternal', name: '공허의 군주', tier: '★★★★★★', color: '#ff3333', img: ASSETS.hero_eternal, dmg: 500, range: 250, speed: 30, prob: 0.002 }
+];
 
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playJumpSound() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-        osc.type = 'square'; osc.frequency.setValueAtTime(200, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+const MATH_DB = {
+    '분수의 나눗셈': [
+        { q: "3/4 ÷ 2/5", a: "15/8", wr: ["3/10", "8/15", "6/20"] },
+        { q: "5/6 ÷ 1/3", a: "15/6", wr: ["5/18", "6/15", "2/5"] },
+        { q: "2/7 ÷ 3/4", a: "8/21", wr: ["14/12", "6/28", "21/8"] }
+    ],
+    '소수의 나눗셈': [
+        { q: "4.8 ÷ 1.2", a: "4", wr: ["3.6", "4.2", "5"] },
+        { q: "7.5 ÷ 2.5", a: "3", wr: ["2.5", "3.5", "4"] },
+        { q: "12.6 ÷ 3", a: "4.2", wr: ["3.2", "4.6", "5.2"] }
+    ]
+};
+
+// 이미지 캐싱
+const IMAGES = {};
+for(let key in ASSETS) {
+    let img = new Image();
+    img.src = ASSETS[key];
+    // 이미지가 없거나 깨졌을 때 처리
+    img.onerror = function() { this.error = true; };
+    IMAGES[key] = img;
+}
+
+/**
+ * 2. 게임 상태 및 변수
+ */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let gameState = {
+    mode: 'normal',
+    unit: '',
+    gold: 150,
+    hp: 10,
+    wave: 1,
+    speed: 1,
+    isPlaying: false,
+    inventory: [],
+    towers: [],
+    enemies: [],
+    projectiles: [],
+    placingHero: null
+};
+
+// 맵 경로 (간단한 S자 형태)
+const PATH = [
+    {x: 0, y: 100},
+    {x: 600, y: 100},
+    {x: 600, y: 300},
+    {x: 200, y: 300},
+    {x: 200, y: 500},
+    {x: 800, y: 500}
+];
+
+let lastTime = 0;
+let waveTimer = 0;
+let spawnCount = 0;
+let enemiesToSpawn = 0;
+
+/**
+ * 3. 핵심 클래스
+ */
+class Enemy {
+    constructor(hp, speed, reward, isBoss = false) {
+        this.x = PATH[0].x;
+        this.y = PATH[0].y;
+        this.pathIndex = 0;
+        this.maxHp = hp;
+        this.hp = hp;
+        this.speed = speed;
+        this.reward = reward;
+        this.isBoss = isBoss;
+        this.radius = isBoss ? 20 : 12;
     }
 
-    // 🚀 수정 포인트: 최대 점프 높이(2.7칸)를 절대 넘지 않도록 모든 기둥을 1~2칸으로 조정.
-    // 비행기(Ship) 터널 틈을 넓혀 쾌적한 비행 보장.
-    const stages = [
-        { name: "Stage 1: 워밍업 질주", music: tunes[0], map: [
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "...................................XXXXX..................................XXXXXX........................................................................................................XXXXX..................................XXXXXX.....................................................................",
-            "..............^....................XXXXX...........^...........^..........XXXXXX..........^.......^........^...........^.......................XXXXX........^.........XXXXXX..........XXXXX.......^...........^..........XXXXXX...........^...........^.............................................F",
-            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ]},
-        { name: "Stage 2: 비행의 정석", music: tunes[1], map: [
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "........................................................................XXXXXXX..............................................................................XXXXXXX.......................................................XXXXXX.......................................................................",
-            "........................................................................XXXXXXX..............................................................................XXXXXXX.......................................................XXXXXX.......................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "........................................................................XXXXXXX..............................................................................XXXXXXX.......................................................XXXXXX.......................................................................",
-            "........................................................................XXXXXXX..............................................................................XXXXXXX.......................................................XXXXXX.......................................................................",
-            "...................XXXX...................XXXXX...................................................XXXX...................XXXXX......................................................XXXXX..................................................................XXXXX............................................",
-            ".........^.........XXXX.......^...........XXXXX.......S.................................C.........XXXX......^............XXXXX.......S......................................C.........XXXXX.......^.........^.................................C..........XXXXX..........^...........^....................F",
-            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ]},
-        { name: "Stage 3: 리듬 점프", music: tunes[2], map: [
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            ".......................................XXXX.....................................................................................................................XXXXX...................................................................................................................................",
-            ".......................XXXX............XXXX.........................XXXXX.......................................................XXXXX...........................XXXXX.......................XXXXX........................................................XXXXX............................................",
-            ".......................XXXX............XXXX.........................XXXXX.......................................................XXXXX...........................XXXXX.......................XXXXX........................................................XXXXX............................................",
-            "...........^...........XXXX.......^....XXXX.....^..........^........XXXXX.......^.........^...........^.........^...............XXXXX.......^.........^.........XXXXX.......^.......^.......XXXXX........^...........^.............^..........^..........XXXXX.........^..........^....................F",
-            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ]},
-        { name: "Stage 4: 긴 터널 비행", music: tunes[3], map: [
-            "............................................................................................................................................................................................................................................................................................................",
-            "....................................................................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX..............................................................................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.......................................................................................",
-            "....................................................................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX..............................................................................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.......................................................................................",
-            "....................................................................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX..............................................................................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.......................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "....................................................................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX..............................................................................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.......................................................................................",
-            "....................XXXXX...........................................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX...........................................................XXXXX............XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX..........................................XXXXXX.........................................",
-            ".......^............XXXXX..........^........S.......................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.......C........^...........^..................S...........XXXXX............XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.........C........^.........^.............XXXXXX.........^...........^..................F",
-            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ]},
-        { name: "Stage 5: 마라톤 콤보 (버그 완벽 수정!)", music: tunes[4], map: [
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            ".............................................................................................................................................................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.............................................................................................................",
-            ".............................................................................................................................................................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.............................................................................................................",
-            ".............................................................................................................................................................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.............................................................................................................",
-            "............................................................................................................................................................................................................................................................................................................",
-            "...................................XXXXXX...................................................................................................................................................................................................XXXXX................................XXXXX......................",
-            "...................................XXXXXX..........................XXXXXX...............................................................................................................................................................XXXXX................................XXXXX......................",
-            ".......^..........^................XXXXXX.......^........^.........XXXXXX............S...........................................................................................................C........^.........XXXXXX.........^............XXXXX.........^........^...........XXXXX.........^........F",
-            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ]}
-    ];
-
-    stages.forEach((stage, idx) => {
-        let opt = document.createElement('option');
-        opt.value = idx; opt.innerText = stage.name;
-        stageSelect.appendChild(opt);
-    });
-
-    const BLOCK_SIZE = 40; let gameSpeed = 7.5;
-    let isPlaying = false, isHolding = false;
-    let animationId, cameraX = 0, frame = 0, currentStageIndex = 0;
-
-    const player = { x: 150, y: 0, size: 30, dy: 0, mode: 'cube', rotation: 0, grounded: false, dead: false };
-    const peerPlayer = { active: false, camX: 0, y: 0, rot: 0, mode: 'cube', dead: false };
-    let peer = null, conn = null, isHost = false, isMultiplayer = false;
-
-    let blocks = [], spikes = [], portals = [], finishLine = null, maxLevelWidth = 0;
-
-    function loadLevel(index) {
-        currentStageIndex = index;
-        let levelMap = stages[index].map;
-        blocks = []; spikes = []; portals = []; finishLine = null;
-        maxLevelWidth = levelMap[0].length * BLOCK_SIZE;
-        bgm.src = stages[index].music; bgm.load();
-
-        for (let r = 0; r < levelMap.length; r++) {
-            for (let c = 0; c < levelMap[r].length; c++) {
-                let char = levelMap[r][c];
-                let x = c * BLOCK_SIZE, y = r * BLOCK_SIZE;
-                if (char === 'X') blocks.push({ x, y, size: BLOCK_SIZE });
-                else if (char === '^') spikes.push({ x, y, size: BLOCK_SIZE });
-                else if (char === 'S' || char === 'C') portals.push({ x, y, type: char });
-                else if (char === 'F') finishLine = { x, y };
-            }
-        }
-    }
-
-    function initPeer() {
-        peer = new Peer();
-        peer.on('open', id => {
-            document.getElementById('my-id').innerText = id;
-            document.getElementById('host-btn').disabled = false; 
-            document.getElementById('join-btn').disabled = false;
-        });
-        peer.on('connection', c => {
-            conn = c; setupConnection(); isHost = true;
-            document.getElementById('status-msg').innerText = "친구가 접속했습니다! 시작을 눌러주세요.";
-        });
-    }
-
-    document.getElementById('host-btn').addEventListener('click', e => { 
-        e.target.disabled = true; document.getElementById('join-btn').disabled = true; 
-        document.getElementById('status-msg').innerText = "방 코드를 친구에게 알려주세요.";
-    });
-    document.getElementById('join-btn').addEventListener('click', () => {
-        let t = document.getElementById('target-id').value.trim();
-        if(t) { 
-            document.getElementById('status-msg').innerText = "접속 중...";
-            conn = peer.connect(t); 
-            conn.on('open', () => { 
-                setupConnection(); isHost = false; 
-                document.getElementById('status-msg').innerText = "방장이 게임을 시작할 때까지 대기하세요.";
-            }); 
-        }
-    });
-
-    function setupConnection() {
-        isMultiplayer = true; peerPlayer.active = true;
-        conn.on('data', d => {
-            if(d.type === 'start') { stageSelect.value = d.stage; startGame(d.stage); }
-            else if(d.type === 'sync') {
-                peerPlayer.camX = d.camX; peerPlayer.y = d.y;
-                peerPlayer.rot = d.rot; peerPlayer.mode = d.mode; peerPlayer.dead = d.dead;
-            }
-        });
-    }
-
-    document.getElementById('solo-btn').addEventListener('click', () => {
-        isMultiplayer = false; peerPlayer.active = false; 
-        startGame(parseInt(stageSelect.value));
-    });
-
-    document.getElementById('restart-btn').addEventListener('click', () => {
-        if (!uiGameOver.classList.contains('hidden')) startGame(currentStageIndex);
-    });
-
-    function handleInput(e, state) {
-        if (e.target && (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
-        if (player.dead && !uiGameOver.classList.contains('hidden')) {
-            if (state && (e.code === 'Space' || e.type === 'mousedown' || e.type === 'touchstart')) {
-                startGame(currentStageIndex); return;
-            }
-        }
-        if (e.type.includes('key')) {
-            if (e.code === 'Space' || e.code === 'ArrowUp' || e.key === ' ' || e.key === 'ArrowUp') {
-                if (state && e.type === 'keydown') e.preventDefault();
-                isHolding = state;
+    update(dt) {
+        if(this.pathIndex >= PATH.length - 1) return;
+        
+        let target = PATH[this.pathIndex + 1];
+        let dx = target.x - this.x;
+        let dy = target.y - this.y;
+        let dist = Math.hypot(dx, dy);
+        
+        let moveDist = this.speed * dt * gameState.speed;
+        
+        if(dist <= moveDist) {
+            this.x = target.x;
+            this.y = target.y;
+            this.pathIndex++;
+            if(this.pathIndex >= PATH.length - 1) {
+                gameState.hp -= this.isBoss ? 5 : 1;
+                this.hp = 0; // 기지 도달 시 소멸
+                updateUI();
+                if(gameState.hp <= 0) gameOver();
             }
         } else {
-            if (state && e.cancelable) e.preventDefault();
-            isHolding = state;
+            this.x += (dx / dist) * moveDist;
+            this.y += (dy / dist) * moveDist;
         }
+    }
+
+    draw(ctx) {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.isBoss ? '#aa0000' : '#8800ff';
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.stroke();
+
+        // 체력바
+        ctx.fillStyle = '#f00';
+        ctx.fillRect(this.x - 15, this.y - 20, 30, 4);
+        ctx.fillStyle = '#0f0';
+        ctx.fillRect(this.x - 15, this.y - 20, 30 * (this.hp / this.maxHp), 4);
+    }
+}
+
+class Tower {
+    constructor(x, y, data) {
+        this.x = x;
+        this.y = y;
+        this.data = data;
+        this.cooldown = 0;
+        this.imgKey = Object.keys(ASSETS).find(k => ASSETS[k] === data.img);
+    }
+
+    update(dt) {
+        if(this.cooldown > 0) {
+            this.cooldown -= dt * gameState.speed;
+            return;
+        }
+
+        // 사거리 내 적 찾기
+        let target = null;
+        let minDist = this.data.range;
+
+        for(let enemy of gameState.enemies) {
+            let dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+            if(dist <= minDist) {
+                target = enemy;
+                break; // 첫 번째로 발견된 적 공격
+            }
+        }
+
+        if(target) {
+            gameState.projectiles.push(new Projectile(this.x, this.y, target, this.data.dmg));
+            this.cooldown = this.data.speed;
+        }
+    }
+
+    draw(ctx) {
+        let img = IMAGES[this.imgKey];
+        if(img && !img.error && img.complete) {
+            ctx.drawImage(img, this.x - 20, this.y - 20, 40, 40);
+        } else {
+            // 이미지 없을 때 대체 픽셀 네모
+            ctx.fillStyle = this.data.color;
+            ctx.fillRect(this.x - 15, this.y - 15, 30, 30);
+            ctx.strokeStyle = '#fff';
+            ctx.strokeRect(this.x - 15, this.y - 15, 30, 30);
+        }
+        
+        // 등급 표시
+        ctx.fillStyle = '#fff';
+        ctx.font = '12px DungGeunMo';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.data.tier, this.x, this.y - 25);
+    }
+}
+
+class Projectile {
+    constructor(x, y, target, dmg) {
+        this.x = x;
+        this.y = y;
+        this.target = target;
+        this.dmg = dmg;
+        this.speed = 400;
+        this.active = true;
+    }
+
+    update(dt) {
+        if(!this.target || this.target.hp <= 0) {
+            this.active = false;
+            return;
+        }
+
+        let dx = this.target.x - this.x;
+        let dy = this.target.y - this.y;
+        let dist = Math.hypot(dx, dy);
+        let moveDist = this.speed * dt * gameState.speed;
+
+        if(dist <= moveDist) {
+            this.target.hp -= this.dmg;
+            if(this.target.hp <= 0) {
+                gameState.gold += this.target.reward;
+                updateUI();
+            }
+            this.active = false;
+        } else {
+            this.x += (dx / dist) * moveDist;
+            this.y += (dy / dist) * moveDist;
+        }
+    }
+
+    draw(ctx) {
+        ctx.fillStyle = '#ff0';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+/**
+ * 4. 게임 흐름 제어
+ */
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+    document.getElementById(id).classList.remove('hidden');
+}
+
+function selectMode(mode) {
+    gameState.mode = mode;
+    if(mode === 'student') {
+        showScreen('screen-math');
+    } else {
+        startGame('none');
+    }
+}
+
+function startGame(unit) {
+    gameState.unit = unit;
+    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+    document.getElementById('game-ui').classList.remove('hidden');
+    
+    // 초기화
+    gameState.hp = 10;
+    gameState.gold = 150;
+    gameState.wave = 1;
+    gameState.towers = [];
+    gameState.enemies = [];
+    gameState.inventory = [];
+    gameState.isPlaying = true;
+    
+    startWave();
+    updateUI();
+    lastTime = performance.now();
+    requestAnimationFrame(gameLoop);
+}
+
+function startWave() {
+    waveTimer = 0;
+    spawnCount = 0;
+    enemiesToSpawn = 5 + (gameState.wave * 2);
+}
+
+function gameOver() {
+    gameState.isPlaying = false;
+    alert(`GAME OVER\n도달한 웨이브: ${gameState.wave}`);
+    document.getElementById('game-ui').classList.add('hidden');
+    showScreen('screen-title');
+}
+
+function updateUI() {
+    document.getElementById('ui-wave').innerText = `WAVE: ${gameState.wave}`;
+    document.getElementById('ui-gold').innerText = `💰 ${gameState.gold}`;
+    document.getElementById('ui-hp').innerText = `❤️ ${gameState.hp}`;
+    document.getElementById('inv-count').innerText = gameState.inventory.length;
+}
+
+function speedUp() {
+    gameState.speed = gameState.speed === 1 ? 2 : (gameState.speed === 2 ? 3 : 1);
+    document.getElementById('speed-indicator').innerText = gameState.speed;
+}
+
+function showToast(msg) {
+    let t = document.createElement('div');
+    t.className = 'toast';
+    t.innerText = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2000);
+}
+
+/**
+ * 5. 소환 및 수학 문제 시스템
+ */
+function openSummon() {
+    if(gameState.gold < 100) {
+        showToast("골드가 부족합니다! (100G 필요)");
+        return;
     }
     
-    window.addEventListener('keydown', e => handleInput(e, true), { passive: false });
-    window.addEventListener('keyup', e => handleInput(e, false));
-    window.addEventListener('mousedown', e => handleInput(e, true), { passive: false });
-    window.addEventListener('mouseup', e => handleInput(e, false));
-    window.addEventListener('touchstart', e => handleInput(e, true), { passive: false });
-    window.addEventListener('touchend', e => handleInput(e, false));
-
-    function checkAABB(r1, r2, pad = 0) {
-        return (r1.x + pad < r2.x + r2.w - pad && r1.x + r1.w - pad > r2.x + pad &&
-                r1.y + pad < r2.y + r2.h - pad && r1.y + r1.h - pad > r2.y + pad);
+    if(gameState.mode === 'student') {
+        generateMathQuestion();
+    } else {
+        gameState.gold -= 100;
+        executeSummon();
     }
+}
 
-    function updatePhysics() {
-        if (player.dead) return;
-
-        if (player.mode === 'cube') {
-            player.dy += 1.3;
-            if (isHolding && player.grounded) { 
-                player.dy = -16.5; player.grounded = false; playJumpSound(); 
-            }
-            player.dy = Math.max(-18, Math.min(player.dy, 18));
-            if (!player.grounded) player.rotation += 6.5;
-            else player.rotation = Math.round(player.rotation / 90) * 90;
-        } else if (player.mode === 'ship') {
-            if (isHolding) player.dy -= 0.8; 
-            else player.dy += 0.7;
-            player.dy = Math.max(-8, Math.min(player.dy, 8));
-            player.rotation = player.dy * 3;
-        }
-
-        player.y += player.dy;
-        player.grounded = false;
-        
-        let hitWall = false;
-        let shipHitBlock = false;
-        const pRect = { x: player.x, y: player.y, w: player.size, h: player.size };
-
-        for (let b of blocks) {
-            let bRect = { x: b.x - cameraX, y: b.y, w: b.size, h: b.size };
-            if (checkAABB(pRect, bRect)) {
-                if (player.mode === 'ship') {
-                    shipHitBlock = true;
-                    break;
-                }
-                
-                let overLeft = (pRect.x + pRect.w) - bRect.x;
-                let overRight = (bRect.x + bRect.w) - pRect.x;
-                let overTop = (pRect.y + pRect.h) - bRect.y;
-                let overBot = (bRect.y + bRect.h) - pRect.y;
-
-                if (overTop <= 20) { player.y = bRect.y - player.size; player.dy = 0; player.grounded = true; } 
-                else if (overBot <= 20) { player.y = bRect.y + bRect.h; player.dy = 0; } 
-                else { if (overLeft > 4 && overRight > 4) hitWall = true; }
-                pRect.y = player.y; 
-            }
-        }
-
-        if (player.mode === 'ship') {
-            if (player.y < 0 || player.y + player.size > canvas.height || shipHitBlock) die();
-        } else {
-            if (hitWall || player.y < -50 || player.y > canvas.height + 50) die();
-        }
-
-        for (let s of spikes) {
-            let sRect = { x: s.x - cameraX + 8, y: s.y + 16, w: s.size - 16, h: s.size - 16 };
-            if (checkAABB(pRect, sRect, 0)) die();
-        }
-
-        for (let i = 0; i < portals.length; i++) {
-            let pt = portals[i];
-            let ptRect = { x: pt.x - cameraX, y: pt.y, w: BLOCK_SIZE, h: BLOCK_SIZE * 2 };
-            if (checkAABB(pRect, ptRect)) {
-                if (pt.type === 'S') player.mode = 'ship';
-                if (pt.type === 'C') player.mode = 'cube';
-                portals.splice(i, 1);
-            }
-        }
-
-        if (finishLine && finishLine.x - cameraX < player.x) winGame();
-    }
-
-    function die() {
-        player.dead = true;
-        if (!isMultiplayer) setTimeout(() => gameOver("CRASHED!"), 100);
-    }
-
-    function drawPlayerShape(p, color, isGhost = false) {
-        if (p.dead) return;
-        ctx.save();
-        ctx.translate(p.x + p.size / 2, p.y + p.size / 2);
-        ctx.rotate((p.rot || p.rotation) * Math.PI / 180);
-        ctx.globalAlpha = isGhost ? 0.3 : 1;
-        ctx.fillStyle = color;
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
-
-        if (p.mode === 'cube') {
-            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-            ctx.strokeRect(-p.size / 2, -p.size / 2, p.size, p.size);
-        } else if (p.mode === 'ship') {
-            ctx.beginPath();
-            ctx.moveTo(p.size/2 + 10, 0); ctx.lineTo(-p.size/2, -p.size/2.5); ctx.lineTo(-p.size/2, p.size/2.5);
-            ctx.closePath(); ctx.fill(); ctx.stroke();
-            if(isHolding && !isGhost) {
-                ctx.fillStyle = '#ff9900'; ctx.fillRect(-p.size/2 - 15, -5, 15, 10);
-            }
-        }
-        ctx.restore();
-    }
-
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-        for (let i = 0; i < canvas.width; i += 40) {
-            ctx.beginPath(); ctx.moveTo(i - (cameraX * 0.5 % 40), 0); ctx.lineTo(i - (cameraX * 0.5 % 40), canvas.height); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
-        }
-
-        ctx.fillStyle = '#114'; ctx.strokeStyle = '#00ffcc'; ctx.lineWidth = 2;
-        for (let b of blocks) {
-            if (b.x - cameraX > canvas.width || b.x - cameraX < -BLOCK_SIZE) continue;
-            ctx.fillRect(b.x - cameraX, b.y, b.size, b.size);
-            ctx.strokeRect(b.x - cameraX, b.y, b.size, b.size);
-        }
-
-        ctx.fillStyle = '#ff0055'; ctx.strokeStyle = '#fff';
-        for (let s of spikes) {
-            if (s.x - cameraX > canvas.width || s.x - cameraX < -BLOCK_SIZE) continue;
-            ctx.beginPath();
-            ctx.moveTo(s.x - cameraX + s.size / 2, s.y); ctx.lineTo(s.x - cameraX + s.size, s.y + s.size); ctx.lineTo(s.x - cameraX, s.y + s.size);
-            ctx.closePath(); ctx.fill(); ctx.stroke();
-        }
-
-        for (let pt of portals) {
-            if (pt.x - cameraX > canvas.width || pt.x - cameraX < -BLOCK_SIZE) continue;
-            ctx.lineWidth = 4;
-            ctx.strokeStyle = pt.type==='S'?'#ff00ff': '#00ff00';
-            ctx.beginPath();
-            ctx.ellipse(pt.x - cameraX + BLOCK_SIZE/2, pt.y + BLOCK_SIZE, 15, BLOCK_SIZE, 0, 0, Math.PI * 2);
-            ctx.stroke();
-        }
-
-        if (finishLine) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-            ctx.fillRect(finishLine.x - cameraX, 0, 10, canvas.height);
-        }
-
-        if (isMultiplayer && peerPlayer.active) {
-            let ghostX = 150 + (peerPlayer.camX - cameraX);
-            drawPlayerShape({ x: ghostX, y: peerPlayer.y, size: 30, rot: peerPlayer.rot, mode: peerPlayer.mode, dead: peerPlayer.dead }, '#ffeb3b', true);
-        }
-
-        drawPlayerShape(player, '#ffeb3b', false);
-
-        let progress = Math.min(100, Math.max(0, Math.floor(((player.x + cameraX) / maxLevelWidth) * 100)));
-        ctx.fillStyle = '#fff'; ctx.font = '12px "Press Start 2P"';
-        ctx.fillText(`${stages[currentStageIndex].name} - ${progress}%`, 20, 30);
-    }
-
-    function animate() {
-        if (!isPlaying) return;
-        
-        if (!player.dead) cameraX += gameSpeed;
-        updatePhysics();
-        draw();
-
-        if (isMultiplayer && conn && frame % 2 === 0) {
-            conn.send({ type: 'sync', camX: cameraX, y: player.y, rot: player.rotation, mode: player.mode, dead: player.dead });
-        }
-
-        if (isMultiplayer && player.dead && peerPlayer.dead) gameOver("BOTH CRASHED!");
-
-        frame++;
-        animationId = requestAnimationFrame(animate);
-    }
-
-    function startGame(stageIndex) {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        if (isHost && conn) conn.send({ type: 'start', stage: stageIndex });
-        
-        loadLevel(stageIndex);
-        player.x = 150; player.y = 410; player.dy = 0; player.rotation = 0;
-        player.mode = 'cube'; player.dead = false; player.grounded = true;
-        cameraX = 0; frame = 0; isHolding = false;
-        
-        uiLobby.classList.add('hidden'); uiGameOver.classList.add('hidden');
-        isPlaying = true; animate();
-        
-        bgm.currentTime = 0;
-        bgm.play().catch(e => console.log("BGM 재생 막힘:", e));
-    }
-
-    function gameOver(msg) {
-        isPlaying = false; cancelAnimationFrame(animationId);
-        bgm.pause();
-        document.getElementById('result-title').innerText = msg;
-        document.getElementById('result-title').style.color = "#ff0055";
-        let p = Math.min(100, Math.floor(((player.x + cameraX) / maxLevelWidth) * 100));
-        document.getElementById('progress-text').innerText = `Progress: ${p}%`;
-        
-        if(isMultiplayer) document.getElementById('restart-btn').style.display = 'none';
-        else document.getElementById('restart-btn').style.display = 'block';
-
-        uiGameOver.classList.remove('hidden');
-    }
-
-    function winGame() {
-        gameOver("LEVEL CLEARED!");
-        document.getElementById('result-title').style.color = "#00ffcc";
-        document.getElementById('restart-btn').innerText = "다시 하기 (Space)";
-    }
-
-    document.getElementById('lobby-btn').addEventListener('click', () => {
-        uiGameOver.classList.add('hidden'); uiLobby.classList.remove('hidden');
+function generateMathQuestion() {
+    let pool = MATH_DB[gameState.unit] || MATH_DB['분수의 나눗셈'];
+    let q = pool[Math.floor(Math.random() * pool.length)];
+    
+    document.getElementById('math-question').innerText = q.q + " = ?";
+    let grid = document.getElementById('math-answers');
+    grid.innerHTML = '';
+    
+    let answers = [q.a, ...q.wr];
+    answers.sort(() => Math.random() - 0.5); // 섞기
+    
+    answers.forEach(ans => {
+        let btn = document.createElement('button');
+        btn.className = 'answer-btn';
+        btn.innerText = ans;
+        btn.onclick = () => checkAnswer(ans, q.a);
+        grid.appendChild(btn);
     });
+    
+    document.getElementById('math-modal').classList.remove('hidden');
+}
 
-    initPeer();
+function checkAnswer(selected, correct) {
+    document.getElementById('math-modal').classList.add('hidden');
+    if(selected === correct) {
+        gameState.gold -= 100;
+        showToast("정답입니다! 영웅을 소환합니다.");
+        executeSummon();
+    } else {
+        showToast("오답입니다... 소환에 실패했습니다.");
+    }
+}
+
+function executeSummon() {
+    let rand = Math.random();
+    let cumulative = 0;
+    let selectedHero = HERO_DB[0];
+
+    for(let hero of HERO_DB) {
+        cumulative += hero.prob;
+        if(rand <= cumulative) {
+            selectedHero = hero;
+            break;
+        }
+    }
+
+    gameState.inventory.push(selectedHero);
+    showToast(`[${selectedHero.tier}] ${selectedHero.name} 획득!`);
+    updateUI();
+}
+
+/**
+ * 6. 배치 시스템
+ */
+function toggleInventory() {
+    if(gameState.inventory.length === 0) {
+        showToast("배치할 영웅이 없습니다.");
+        return;
+    }
+    
+    // 단순화를 위해 인벤토리의 첫 번째 영웅을 배치 대기 상태로 만듦
+    gameState.placingHero = gameState.inventory.shift();
+    showToast(`${gameState.placingHero.name} 배치 모드! 맵을 터치하세요.`);
+    updateUI();
+}
+
+canvas.addEventListener('click', (e) => {
+    if(!gameState.placingHero) return;
+    
+    let rect = canvas.getBoundingClientRect();
+    // 캔버스 실제 크기와 CSS 크기 비율 보정
+    let scaleX = canvas.width / rect.width;
+    let scaleY = canvas.height / rect.height;
+    
+    let x = (e.clientX - rect.left) * scaleX;
+    let y = (e.clientY - rect.top) * scaleY;
+    
+    // 경로 위에 설치 방지 (간단한 거리 체크)
+    let onPath = false;
+    for(let i=0; i<PATH.length-1; i++) {
+        let p1 = PATH[i], p2 = PATH[i+1];
+        // 선분과의 거리 계산 (단순화: 박스 충돌로 대체)
+        let minX = Math.min(p1.x, p2.x) - 20;
+        let maxX = Math.max(p1.x, p2.x) + 20;
+        let minY = Math.min(p1.y, p2.y) - 20;
+        let maxY = Math.max(p1.y, p2.y) + 20;
+        if(x >= minX && x <= maxX && y >= minY && y <= maxY) {
+            onPath = true;
+            break;
+        }
+    }
+
+    if(onPath) {
+        showToast("길 위에는 배치할 수 없습니다!");
+        gameState.inventory.unshift(gameState.placingHero); // 취소, 원상복구
+    } else {
+        gameState.towers.push(new Tower(x, y, gameState.placingHero));
+        showToast("배치 완료!");
+    }
+    
+    gameState.placingHero = null;
+    updateUI();
+});
+
+/**
+ * 7. 메인 게임 루프 및 렌더링
+ */
+function gameLoop(time) {
+    if(!gameState.isPlaying) return;
+    
+    let dt = (time - lastTime) / 1000;
+    lastTime = time;
+    
+    // 웨이브 스폰 로직
+    if(spawnCount < enemiesToSpawn) {
+        waveTimer += dt * gameState.speed;
+        if(waveTimer > 1.5) {
+            let hp = 20 * Math.pow(1.2, gameState.wave);
+            let spd = 40 + (gameState.wave * 2);
+            let rew = 10;
+            
+            // 매 10웨이브마다 보스
+            let isBoss = (gameState.wave % 10 === 0 && spawnCount === enemiesToSpawn - 1);
+            if(isBoss) {
+                hp *= 10;
+                rew = 100;
+            }
+            
+            gameState.enemies.push(new Enemy(hp, spd, rew, isBoss));
+            spawnCount++;
+            waveTimer = 0;
+        }
+    } else if(gameState.enemies.length === 0) {
+        // 웨이브 클리어
+        gameState.wave++;
+        startWave();
+        updateUI();
+    }
+
+    // 업데이트
+    gameState.enemies.forEach(e => e.update(dt));
+    gameState.enemies = gameState.enemies.filter(e => e.hp > 0);
+    
+    gameState.towers.forEach(t => t.update(dt));
+    
+    gameState.projectiles.forEach(p => p.update(dt));
+    gameState.projectiles = gameState.projectiles.filter(p => p.active);
+
+    // 렌더링
+    drawGame();
+
+    requestAnimationFrame(gameLoop);
+}
+
+function drawGame() {
+    // 배경 (풀밭 느낌)
+    ctx.fillStyle = '#2d5a27';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // 장식용 패턴
+    ctx.fillStyle = '#346b2d';
+    for(let i=0; i<50; i++) {
+        let px = (Math.sin(i*7) * 400 + 400);
+        let py = (Math.cos(i*3) * 300 + 300);
+        ctx.fillRect(px, py, 15, 15);
+    }
+
+    // 길 그리기
+    ctx.strokeStyle = '#8b5a2b';
+    ctx.lineWidth = 40;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(PATH[0].x, PATH[0].y);
+    for(let i=1; i<PATH.length; i++) {
+        ctx.lineTo(PATH[i].x, PATH[i].y);
+    }
+    ctx.stroke();
+    
+    // 기지 그리기
+    let end = PATH[PATH.length-1];
+    ctx.fillStyle = '#444';
+    ctx.fillRect(end.x - 30, end.y - 40, 60, 80);
+    ctx.fillStyle = '#ffaa00';
+    ctx.font = '20px DungGeunMo';
+    ctx.fillText('기지', end.x, end.y - 50);
+
+    // 엔티티 그리기
+    gameState.towers.forEach(t => t.draw(ctx));
+    gameState.enemies.forEach(e => e.draw(ctx));
+    gameState.projectiles.forEach(p => p.draw(ctx));
+
+    // 배치 중 UI 표시
+    if(gameState.placingHero) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.font = '24px DungGeunMo';
+        ctx.textAlign = 'center';
+        ctx.fillText("맵을 터치하여 영웅을 배치하세요", canvas.width/2, 50);
+    }
+}
 </script>
 </body>
 </html>
