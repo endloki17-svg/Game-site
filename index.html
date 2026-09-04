@@ -1,766 +1,629 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>현철 망겜</title>
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap');
-    
-    body {
-        margin: 0;
-        padding: 0;
-        background-color: #111;
-        color: #fff;
-        font-family: 'DungGeunMo', sans-serif;
-        overflow: hidden;
-        user-select: none;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>현철 망겜 — 픽셀 디펜스</title>
+    <style>
+        @font-face {
+            font-family: 'DungGeunMo';
+            src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
+        }
 
-    #game-wrapper {
-        position: relative;
-        width: 100vw;
-        height: 100vh;
-        max-width: 800px;
-        max-height: 600px;
-        margin: 0 auto;
-        background: #222;
-        box-shadow: 0 0 20px rgba(0,0,0,0.8);
-        overflow: hidden;
-    }
+        :root {
+            --bg-dark: #0a0a0a;
+            --panel-bg: #1a1a1a;
+            --text-color: #ffffff;
+            --accent-color: #ff3e3e;
+            --rare: #4fa7ff;
+            --legendary: #ffcc00;
+            --secret: #e066ff;
+            --eternal: #ff0055;
+        }
 
-    canvas {
-        display: block;
-        width: 100%;
-        height: 100%;
-        image-rendering: pixelated;
-    }
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            background-color: var(--bg-dark);
+            color: var(--text-color);
+            font-family: 'DungGeunMo', monospace;
+            overflow: hidden;
+            user-select: none;
+            touch-action: manipulation;
+        }
 
-    .screen {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        background: rgba(0, 0, 0, 0.85);
-        z-index: 10;
-        transition: opacity 0.3s;
-    }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
 
-    .hidden {
-        display: none !important;
-    }
+        canvas {
+            background-color: #111;
+            image-rendering: pixelated;
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: 70vh;
+            border-bottom: 4px solid #333;
+        }
 
-    h1 {
-        font-size: 40px;
-        color: #ff3333;
-        text-shadow: 2px 2px 0 #fff;
-        margin-bottom: 10px;
-        text-align: center;
-    }
+        /* --- UI Screens --- */
+        .screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
 
-    .btn {
-        background: #333;
-        color: #fff;
-        border: 2px solid #555;
-        padding: 15px 30px;
-        margin: 10px;
-        font-family: inherit;
-        font-size: 20px;
-        cursor: pointer;
-        width: 80%;
-        max-width: 300px;
-        border-radius: 5px;
-        box-sizing: border-box;
-    }
+        .hidden { display: none !important; }
 
-    .btn:active {
-        background: #555;
-        border-color: #fff;
-    }
+        .btn {
+            background: #333;
+            color: white;
+            border: 4px solid #fff;
+            padding: 15px 30px;
+            margin: 10px;
+            font-family: 'DungGeunMo';
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: 0.2s;
+            text-align: center;
+            min-width: 200px;
+        }
 
-    .ui-layer {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 5;
-    }
+        .btn:active { transform: scale(0.95); background: #555; }
 
-    .top-bar {
-        position: absolute;
-        top: 0;
-        width: 100%;
-        padding: 10px;
-        background: rgba(0,0,0,0.7);
-        display: flex;
-        justify-content: space-between;
-        box-sizing: border-box;
-        font-size: 18px;
-    }
+        /* --- Battle UI --- */
+        #hud {
+            width: 100%;
+            padding: 10px;
+            display: flex;
+            justify-content: space-around;
+            background: #222;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
 
-    .bottom-bar {
-        position: absolute;
-        bottom: 0;
-        width: 100%;
-        padding: 10px;
-        background: rgba(0,0,0,0.7);
-        display: flex;
-        justify-content: space-around;
-        box-sizing: border-box;
-        pointer-events: auto;
-    }
+        #bottom-menu {
+            width: 100%;
+            height: 80px;
+            display: flex;
+            background: #111;
+            border-top: 2px solid #444;
+        }
 
-    .bottom-bar button {
-        background: #444;
-        color: #fff;
-        border: 1px solid #777;
-        padding: 10px;
-        font-family: inherit;
-        font-size: 16px;
-        border-radius: 4px;
-        flex: 1;
-        margin: 0 5px;
-    }
+        .menu-btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-right: 1px solid #333;
+            cursor: pointer;
+        }
 
-    #math-modal {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: #222;
-        border: 3px solid #ffaa00;
-        padding: 20px;
-        width: 90%;
-        max-width: 400px;
-        text-align: center;
-        z-index: 20;
-        pointer-events: auto;
-        border-radius: 10px;
-    }
+        .menu-btn:hover { background: #222; }
 
-    .answer-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-        margin-top: 20px;
-    }
-    
-    .answer-btn {
-        background: #444;
-        border: 2px solid #666;
-        color: #fff;
-        padding: 15px;
-        font-size: 18px;
-        font-family: inherit;
-        cursor: pointer;
-    }
+        /* --- Question Modal --- */
+        #modal {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%; max-width: 400px;
+            background: var(--panel-bg);
+            border: 4px solid #fff;
+            padding: 20px;
+            z-index: 200;
+            text-align: center;
+        }
 
-    .toast {
-        position: absolute;
-        top: 20%;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0,0,0,0.8);
-        border: 1px solid #fff;
-        padding: 10px 20px;
-        z-index: 30;
-        animation: fadeOut 2s forwards;
-        pointer-events: none;
-    }
+        .ans-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background: #444;
+            color: white;
+            border: none;
+            font-family: 'DungGeunMo';
+            font-size: 1.1rem;
+        }
 
-    @keyframes fadeOut {
-        0% { opacity: 1; }
-        70% { opacity: 1; }
-        100% { opacity: 0; display: none; }
-    }
-</style>
+        /* --- Text Styling --- */
+        .title { font-size: 3rem; margin-bottom: 20px; color: var(--eternal); text-shadow: 4px 4px #000; }
+        .stat-val { color: var(--legendary); }
+
+    </style>
 </head>
 <body>
 
-<div id="game-wrapper">
-    <!-- 캔버스 (게임 화면) -->
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
-
-    <!-- 인게임 UI -->
-    <div id="game-ui" class="ui-layer hidden">
-        <div class="top-bar">
-            <span id="ui-wave">WAVE: 1</span>
-            <span id="ui-gold">💰 150</span>
-            <span id="ui-hp">❤️ 10</span>
-        </div>
-        <div class="bottom-bar">
-            <button onclick="openSummon()">✨ 소환 (100G)</button>
-            <button onclick="toggleInventory()">🦸 영웅배치 (<span id="inv-count">0</span>)</button>
-            <button onclick="speedUp()">▶ 속도 x<span id="speed-indicator">1</span></button>
-        </div>
-    </div>
-
-    <!-- 타이틀 화면 -->
+<div id="game-container">
+    <!-- Title Screen -->
     <div id="screen-title" class="screen">
-        <h1>현철 망겜</h1>
-        <p>운빨로 시작해서 실력으로 살아남아라.</p>
-        <button class="btn" onclick="showScreen('screen-mode')">게임 시작</button>
+        <div class="title">현철 망겜</div>
+        <div style="margin-bottom: 20px;">운빨로 시작해서 실력으로 살아남아라.</div>
+        <div class="btn" onclick="showScreen('screen-mode')">게임 시작</div>
+        <div class="btn" onclick="alert('도감 준비 중...')">영웅 도감</div>
+        <div class="btn" onclick="resetSave()">데이터 초기화</div>
     </div>
 
-    <!-- 모드 선택 -->
+    <!-- Mode Selection -->
     <div id="screen-mode" class="screen hidden">
-        <h2>플레이 모드</h2>
-        <button class="btn" onclick="selectMode('student')">학생 모드 (수학 포함)</button>
-        <button class="btn" onclick="selectMode('normal')">일반 모드 (디펜스만)</button>
-        <button class="btn" style="background:#552222" onclick="showScreen('screen-title')">뒤로</button>
+        <div class="title" style="font-size: 2rem;">모드 선택</div>
+        <div class="btn" onclick="setMode('student')">학생 모드 (수학)</div>
+        <div class="btn" onclick="setMode('normal')">일반 모드 (무제한)</div>
+        <div class="btn" onclick="showScreen('screen-title')">뒤로가기</div>
     </div>
 
-    <!-- 수학 단원 선택 -->
-    <div id="screen-math" class="screen hidden">
-        <h2>6학년 수학 단원</h2>
-        <button class="btn" onclick="startGame('분수의 나눗셈')">분수의 나눗셈</button>
-        <button class="btn" onclick="startGame('소수의 나눗셈')">소수의 나눗셈</button>
-        <button class="btn" style="background:#552222" onclick="showScreen('screen-mode')">뒤로</button>
-    </div>
-
-    <!-- 수학 문제 모달 -->
-    <div id="math-modal" class="hidden">
-        <h3 style="color:#ffaa00;">✨ 영웅 소환 문제</h3>
-        <p id="math-question" style="font-size:24px; margin:20px 0;">3/4 ÷ 2/5 = ?</p>
-        <div class="answer-grid" id="math-answers">
-            <!-- 버튼 동적 생성 -->
+    <!-- Grade Selection -->
+    <div id="screen-grade" class="screen hidden">
+        <div class="title" style="font-size: 1.5rem;">학년 선택</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="btn" onclick="setGrade(1)">1학년</div>
+            <div class="btn" onclick="setGrade(2)">2학년</div>
+            <div class="btn" onclick="setGrade(3)">3학년</div>
+            <div class="btn" onclick="setGrade(4)">4학년</div>
+            <div class="btn" onclick="setGrade(5)">5학년</div>
+            <div class="btn" onclick="setGrade(6)">6학년 (상세)</div>
         </div>
     </div>
 
+    <!-- Unit Selection (6th Grade Only) -->
+    <div id="screen-unit" class="screen hidden">
+        <div class="title" style="font-size: 1.5rem;">6학년 수학 단원</div>
+        <div class="btn" onclick="setUnit('fraction')">분수의 나눗셈</div>
+        <div class="btn" onclick="setUnit('decimal')">소수의 나눗셈</div>
+        <div class="btn" onclick="setUnit('ratio')">비와 비율</div>
+        <div class="btn" onclick="setUnit('all')">전체 단원</div>
+    </div>
+
+    <!-- Stage Selection -->
+    <div id="screen-stage" class="screen hidden">
+        <div class="title" style="font-size: 1.5rem;">스테이지 선택</div>
+        <div id="stage-list">
+            <div class="btn" onclick="startStage(1)">1. 어둠의 초원</div>
+            <div class="btn" style="opacity: 0.5;">2. 그림자 숲 (잠김)</div>
+        </div>
+    </div>
+
+    <!-- Battle HUD -->
+    <div id="hud">
+        <div>WAVE <span id="wave-txt" class="stat-val">1</span></div>
+        <div>💰 <span id="gold-txt" class="stat-val">500</span></div>
+        <div>❤️ <span id="hp-txt" class="stat-val">10</span></div>
+    </div>
+
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Bottom Menu -->
+    <div id="bottom-menu">
+        <div class="menu-btn" onclick="trySummon()">
+            <span style="font-size: 1.2rem;">✨</span>
+            <span>소환</span>
+        </div>
+        <div class="menu-btn" onclick="toggleSpeed()">
+            <span id="speed-icon">▶</span>
+            <span id="speed-txt">x1</span>
+        </div>
+        <div class="menu-btn" onclick="showScreen('screen-title')">
+            <span>⚙️</span>
+            <span>나가기</span>
+        </div>
+    </div>
+
+    <!-- Math Question Modal -->
+    <div id="modal" class="hidden">
+        <h2 id="modal-title">수학 문제</h2>
+        <div id="question-text" style="font-size: 1.5rem; margin: 20px 0;">3/4 ÷ 2/5 = ?</div>
+        <div id="answer-container">
+            <!-- Buttons injected by JS -->
+        </div>
+    </div>
 </div>
 
 <script>
 /**
- * 1. 에셋 및 데이터 설정
+ * CONFIG & ASSETS
  */
 const ASSETS = {
-    // 깃허브 업로드 파일 기준 어둠 테마 매핑
-    hero_base: "animation.gif",      // 기본: 나무검 용사
-    hero_rare1: "animation-10.gif",  // 레어: 어둠의 정찰병
-    hero_rare2: "animation-11.gif",  // 레어: 그림자 암살자
-    hero_legend: "animation-9.gif",  // 레전더리: 심연의 기사
-    hero_secret1: "animation-1.gif", // 시크릿: 칠흑의 마법사
-    hero_secret2: "animation-8.gif", // 시크릿: 망각의 사신
-    hero_eternal: "animation-2.gif"  // 영원함: 공허의 군주
+    hero_basic: "animation.gif",
+    hero_rare_1: "animation-10.gif",
+    hero_rare_2: "animation-11.gif",
+    hero_legendary: "animation-9.gif",
+    hero_secret_1: "animation-1.gif",
+    hero_secret_2: "animation-8.gif",
+    hero_eternal: "animation-2.gif"
 };
 
 const HERO_DB = [
-    { id: 'base', name: '나무검 용사', tier: '★', color: '#ccc', img: ASSETS.hero_base, dmg: 10, range: 100, speed: 60, prob: 0.50 },
-    { id: 'rare1', name: '어둠의 정찰병', tier: '★★', color: '#55aaff', img: ASSETS.hero_rare1, dmg: 25, range: 120, speed: 50, prob: 0.25 },
-    { id: 'rare2', name: '그림자 암살자', tier: '★★★', color: '#55aaff', img: ASSETS.hero_rare2, dmg: 40, range: 90, speed: 30, prob: 0.15 },
-    { id: 'legend', name: '심연의 기사', tier: '★★★★', color: '#ff55ff', img: ASSETS.hero_legend, dmg: 80, range: 150, speed: 45, prob: 0.06 },
-    { id: 'secret1', name: '칠흑의 마법사', tier: '★★★★★', color: '#ffaa00', img: ASSETS.hero_secret1, dmg: 150, range: 200, speed: 60, prob: 0.025 },
-    { id: 'secret2', name: '망각의 사신', tier: '★★★★★', color: '#ffaa00', img: ASSETS.hero_secret2, dmg: 200, range: 180, speed: 70, prob: 0.013 },
-    { id: 'eternal', name: '공허의 군주', tier: '★★★★★★', color: '#ff3333', img: ASSETS.hero_eternal, dmg: 500, range: 250, speed: 30, prob: 0.002 }
+    { id: 'basic', name: '나무검 용사', rarity: 'COMMON', color: '#fff', dmg: 10, range: 100, spd: 1.0, cost: 100, img: ASSETS.hero_basic },
+    { id: 'rare1', name: '어둠의 칼날', rarity: 'RARE', color: '#4fa7ff', dmg: 25, range: 120, spd: 0.8, cost: 200, img: ASSETS.hero_rare_1 },
+    { id: 'rare2', name: '그림자 궁수', rarity: 'RARE', color: '#4fa7ff', dmg: 20, range: 200, spd: 0.6, cost: 200, img: ASSETS.hero_rare_2 },
+    { id: 'legendary', name: '심연의 군주', rarity: 'LEGENDARY', color: '#ffcc00', dmg: 60, range: 150, spd: 1.2, cost: 500, img: ASSETS.hero_legendary },
+    { id: 'secret1', name: '공허의 유령', rarity: 'SECRET', color: '#e066ff', dmg: 120, range: 180, spd: 1.5, cost: 1000, img: ASSETS.hero_secret_1 },
+    { id: 'secret2', name: '밤의 지배자', rarity: 'SECRET', color: '#e066ff', dmg: 150, range: 140, spd: 1.0, cost: 1000, img: ASSETS.hero_secret_2 },
+    { id: 'eternal', name: '심연의 신', rarity: 'ETERNAL', color: '#ff0055', dmg: 500, range: 250, spd: 0.5, cost: 3000, img: ASSETS.hero_eternal }
 ];
 
-const MATH_DB = {
-    '분수의 나눗셈': [
-        { q: "3/4 ÷ 2/5", a: "15/8", wr: ["3/10", "8/15", "6/20"] },
-        { q: "5/6 ÷ 1/3", a: "15/6", wr: ["5/18", "6/15", "2/5"] },
-        { q: "2/7 ÷ 3/4", a: "8/21", wr: ["14/12", "6/28", "21/8"] }
-    ],
-    '소수의 나눗셈': [
-        { q: "4.8 ÷ 1.2", a: "4", wr: ["3.6", "4.2", "5"] },
-        { q: "7.5 ÷ 2.5", a: "3", wr: ["2.5", "3.5", "4"] },
-        { q: "12.6 ÷ 3", a: "4.2", wr: ["3.2", "4.6", "5.2"] }
+/**
+ * GAME STATE
+ */
+let state = {
+    gold: 500,
+    hp: 10,
+    wave: 1,
+    mode: 'normal',
+    grade: 6,
+    unit: 'all',
+    speed: 1,
+    isGameOver: false,
+    placedHeroes: [],
+    enemies: [],
+    projectiles: [],
+    lastTime: 0,
+    spawnTimer: 0,
+    enemiesToSpawn: 0,
+    placedSlots: [
+        {x: 100, y: 150, occupied: false},
+        {x: 300, y: 150, occupied: false},
+        {x: 500, y: 150, occupied: false},
+        {x: 150, y: 350, occupied: false},
+        {x: 450, y: 350, occupied: false}
     ]
 };
 
-// 이미지 캐싱
-const IMAGES = {};
-for(let key in ASSETS) {
-    let img = new Image();
-    img.src = ASSETS[key];
-    // 이미지가 없거나 깨졌을 때 처리
-    img.onerror = function() { this.error = true; };
-    IMAGES[key] = img;
-}
-
-/**
- * 2. 게임 상태 및 변수
- */
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+canvas.width = 600;
+canvas.height = 500;
 
-let gameState = {
-    mode: 'normal',
-    unit: '',
-    gold: 150,
-    hp: 10,
-    wave: 1,
-    speed: 1,
-    isPlaying: false,
-    inventory: [],
-    towers: [],
-    enemies: [],
-    projectiles: [],
-    placingHero: null
-};
-
-// 맵 경로 (간단한 S자 형태)
-const PATH = [
-    {x: 0, y: 100},
-    {x: 600, y: 100},
-    {x: 600, y: 300},
-    {x: 200, y: 300},
-    {x: 200, y: 500},
-    {x: 800, y: 500}
-];
-
-let lastTime = 0;
-let waveTimer = 0;
-let spawnCount = 0;
-let enemiesToSpawn = 0;
+const imgCache = {};
 
 /**
- * 3. 핵심 클래스
+ * CORE SYSTEMS
  */
-class Enemy {
-    constructor(hp, speed, reward, isBoss = false) {
-        this.x = PATH[0].x;
-        this.y = PATH[0].y;
-        this.pathIndex = 0;
-        this.maxHp = hp;
-        this.hp = hp;
-        this.speed = speed;
-        this.reward = reward;
-        this.isBoss = isBoss;
-        this.radius = isBoss ? 20 : 12;
-    }
 
-    update(dt) {
-        if(this.pathIndex >= PATH.length - 1) return;
-        
-        let target = PATH[this.pathIndex + 1];
-        let dx = target.x - this.x;
-        let dy = target.y - this.y;
-        let dist = Math.hypot(dx, dy);
-        
-        let moveDist = this.speed * dt * gameState.speed;
-        
-        if(dist <= moveDist) {
-            this.x = target.x;
-            this.y = target.y;
-            this.pathIndex++;
-            if(this.pathIndex >= PATH.length - 1) {
-                gameState.hp -= this.isBoss ? 5 : 1;
-                this.hp = 0; // 기지 도달 시 소멸
-                updateUI();
-                if(gameState.hp <= 0) gameOver();
-            }
-        } else {
-            this.x += (dx / dist) * moveDist;
-            this.y += (dy / dist) * moveDist;
-        }
-    }
-
-    draw(ctx) {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = this.isBoss ? '#aa0000' : '#8800ff';
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.stroke();
-
-        // 체력바
-        ctx.fillStyle = '#f00';
-        ctx.fillRect(this.x - 15, this.y - 20, 30, 4);
-        ctx.fillStyle = '#0f0';
-        ctx.fillRect(this.x - 15, this.y - 20, 30 * (this.hp / this.maxHp), 4);
-    }
+function init() {
+    // 이미지 사전 로드
+    Object.keys(ASSETS).forEach(key => {
+        const img = new Image();
+        img.src = ASSETS[key];
+        img.onerror = () => { imgCache[key] = 'error'; };
+        img.onload = () => { imgCache[key] = img; };
+    });
+    
+    loadGame();
+    requestAnimationFrame(gameLoop);
 }
 
-class Tower {
-    constructor(x, y, data) {
-        this.x = x;
-        this.y = y;
-        this.data = data;
-        this.cooldown = 0;
-        this.imgKey = Object.keys(ASSETS).find(k => ASSETS[k] === data.img);
-    }
-
-    update(dt) {
-        if(this.cooldown > 0) {
-            this.cooldown -= dt * gameState.speed;
-            return;
-        }
-
-        // 사거리 내 적 찾기
-        let target = null;
-        let minDist = this.data.range;
-
-        for(let enemy of gameState.enemies) {
-            let dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
-            if(dist <= minDist) {
-                target = enemy;
-                break; // 첫 번째로 발견된 적 공격
-            }
-        }
-
-        if(target) {
-            gameState.projectiles.push(new Projectile(this.x, this.y, target, this.data.dmg));
-            this.cooldown = this.data.speed;
-        }
-    }
-
-    draw(ctx) {
-        let img = IMAGES[this.imgKey];
-        if(img && !img.error && img.complete) {
-            ctx.drawImage(img, this.x - 20, this.y - 20, 40, 40);
-        } else {
-            // 이미지 없을 때 대체 픽셀 네모
-            ctx.fillStyle = this.data.color;
-            ctx.fillRect(this.x - 15, this.y - 15, 30, 30);
-            ctx.strokeStyle = '#fff';
-            ctx.strokeRect(this.x - 15, this.y - 15, 30, 30);
-        }
-        
-        // 등급 표시
-        ctx.fillStyle = '#fff';
-        ctx.font = '12px DungGeunMo';
-        ctx.textAlign = 'center';
-        ctx.fillText(this.data.tier, this.x, this.y - 25);
-    }
-}
-
-class Projectile {
-    constructor(x, y, target, dmg) {
-        this.x = x;
-        this.y = y;
-        this.target = target;
-        this.dmg = dmg;
-        this.speed = 400;
-        this.active = true;
-    }
-
-    update(dt) {
-        if(!this.target || this.target.hp <= 0) {
-            this.active = false;
-            return;
-        }
-
-        let dx = this.target.x - this.x;
-        let dy = this.target.y - this.y;
-        let dist = Math.hypot(dx, dy);
-        let moveDist = this.speed * dt * gameState.speed;
-
-        if(dist <= moveDist) {
-            this.target.hp -= this.dmg;
-            if(this.target.hp <= 0) {
-                gameState.gold += this.target.reward;
-                updateUI();
-            }
-            this.active = false;
-        } else {
-            this.x += (dx / dist) * moveDist;
-            this.y += (dy / dist) * moveDist;
-        }
-    }
-
-    draw(ctx) {
-        ctx.fillStyle = '#ff0';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
-        ctx.fill();
-    }
-}
-
-/**
- * 4. 게임 흐름 제어
- */
 function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
     document.getElementById(id).classList.remove('hidden');
 }
 
-function selectMode(mode) {
-    gameState.mode = mode;
-    if(mode === 'student') {
-        showScreen('screen-math');
+function setMode(m) {
+    state.mode = m;
+    if (m === 'student') showScreen('screen-grade');
+    else showScreen('screen-stage');
+}
+
+function setGrade(g) {
+    state.grade = g;
+    if (g === 6) showScreen('screen-unit');
+    else showScreen('screen-stage');
+}
+
+function setUnit(u) {
+    state.unit = u;
+    showScreen('screen-stage');
+}
+
+function startStage(s) {
+    showScreen('none');
+    resetBattle();
+}
+
+function resetBattle() {
+    state.gold = 500;
+    state.hp = 10;
+    state.wave = 1;
+    state.placedHeroes = [];
+    state.enemies = [];
+    state.projectiles = [];
+    state.enemiesToSpawn = 5;
+    state.isGameOver = false;
+    state.placedSlots.forEach(slot => slot.occupied = false);
+    updateHUD();
+}
+
+/**
+ * MATH SYSTEM
+ */
+function generateQuestion() {
+    let q = "", a = 0, options = [];
+    const type = state.unit === 'all' ? (Math.random() > 0.5 ? 'frac' : 'dec') : (state.unit === 'fraction' ? 'frac' : 'dec');
+
+    if (type === 'frac') {
+        let n1 = Math.floor(Math.random() * 5) + 1;
+        let d1 = Math.floor(Math.random() * 5) + 2;
+        let n2 = Math.floor(Math.random() * 5) + 1;
+        let d2 = Math.floor(Math.random() * 5) + 2;
+        q = `${n1}/${d1} ÷ ${n2}/${d2} = ?`;
+        // 정답 계산 (근사치 또는 텍스트 비교 대신 여기선 간단히 표현)
+        a = `${(n1*d2)}/${(d1*n2)}`;
+        options = [a, `${n1*n2}/${d1*d2}`, `${n1+n2}/${d1+d2}`, `${d1}/${n1}`];
     } else {
-        startGame('none');
+        let v1 = (Math.random() * 10).toFixed(1);
+        let v2 = Math.floor(Math.random() * 5) + 1;
+        q = `${v1} ÷ ${v2} = ?`;
+        a = (v1 / v2).toFixed(2);
+        options = [a, (v1*v2).toFixed(1), (v1-v2).toFixed(1), "0.5"];
+    }
+
+    options.sort(() => Math.random() - 0.5);
+    return { q, a, options };
+}
+
+function trySummon() {
+    if (state.mode === 'student') {
+        const quest = generateQuestion();
+        document.getElementById('question-text').innerText = quest.q;
+        const container = document.getElementById('answer-container');
+        container.innerHTML = '';
+        quest.options.forEach(opt => {
+            const b = document.createElement('button');
+            b.className = 'ans-btn';
+            b.innerText = opt;
+            b.onclick = () => {
+                if (opt === quest.a) {
+                    alert("정답! 영웅을 소환합니다.");
+                    doSummon();
+                } else {
+                    alert("오답입니다... 소환 실패!");
+                }
+                document.getElementById('modal').classList.add('hidden');
+            };
+            container.appendChild(b);
+        });
+        document.getElementById('modal').classList.remove('hidden');
+    } else {
+        if (state.gold >= 200) {
+            state.gold -= 200;
+            doSummon();
+            updateHUD();
+        } else {
+            alert("골드가 부족합니다! (소환비 200G)");
+        }
     }
 }
 
-function startGame(unit) {
-    gameState.unit = unit;
-    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-    document.getElementById('game-ui').classList.remove('hidden');
-    
-    // 초기화
-    gameState.hp = 10;
-    gameState.gold = 150;
-    gameState.wave = 1;
-    gameState.towers = [];
-    gameState.enemies = [];
-    gameState.inventory = [];
-    gameState.isPlaying = true;
-    
-    startWave();
-    updateUI();
-    lastTime = performance.now();
+function doSummon() {
+    // 확률 기반 소환
+    const rand = Math.random() * 100;
+    let heroTemplate;
+    if (rand < 2) heroTemplate = HERO_DB[6]; // Eternal 2%
+    else if (rand < 7) heroTemplate = HERO_DB[Math.random() > 0.5 ? 4 : 5]; // Secret 5%
+    else if (rand < 15) heroTemplate = HERO_DB[3]; // Legendary 8%
+    else if (rand < 40) heroTemplate = HERO_DB[Math.random() > 0.5 ? 1 : 2]; // Rare 25%
+    else heroTemplate = HERO_DB[0]; // Common 60%
+
+    // 빈 슬롯 찾기
+    const emptySlot = state.placedSlots.find(s => !s.occupied);
+    if (emptySlot) {
+        const newHero = {
+            ...heroTemplate,
+            x: emptySlot.x,
+            y: emptySlot.y,
+            lastShot: 0
+        };
+        state.placedHeroes.push(newHero);
+        emptySlot.occupied = true;
+    } else {
+        alert("배치할 공간이 없습니다!");
+    }
+}
+
+/**
+ * GAME LOOP & RENDER
+ */
+function updateHUD() {
+    document.getElementById('gold-txt').innerText = state.gold;
+    document.getElementById('hp-txt').innerText = state.hp;
+    document.getElementById('wave-txt').innerText = state.wave;
+}
+
+function toggleSpeed() {
+    state.speed = state.speed === 1 ? 2 : (state.speed === 2 ? 3 : 1);
+    document.getElementById('speed-txt').innerText = 'x' + state.speed;
+}
+
+function gameLoop(timestamp) {
+    const dt = (timestamp - state.lastTime) / 1000 * state.speed;
+    state.lastTime = timestamp;
+
+    if (!state.isGameOver) {
+        update(dt);
+    }
+    render();
     requestAnimationFrame(gameLoop);
 }
 
-function startWave() {
-    waveTimer = 0;
-    spawnCount = 0;
-    enemiesToSpawn = 5 + (gameState.wave * 2);
-}
-
-function gameOver() {
-    gameState.isPlaying = false;
-    alert(`GAME OVER\n도달한 웨이브: ${gameState.wave}`);
-    document.getElementById('game-ui').classList.add('hidden');
-    showScreen('screen-title');
-}
-
-function updateUI() {
-    document.getElementById('ui-wave').innerText = `WAVE: ${gameState.wave}`;
-    document.getElementById('ui-gold').innerText = `💰 ${gameState.gold}`;
-    document.getElementById('ui-hp').innerText = `❤️ ${gameState.hp}`;
-    document.getElementById('inv-count').innerText = gameState.inventory.length;
-}
-
-function speedUp() {
-    gameState.speed = gameState.speed === 1 ? 2 : (gameState.speed === 2 ? 3 : 1);
-    document.getElementById('speed-indicator').innerText = gameState.speed;
-}
-
-function showToast(msg) {
-    let t = document.createElement('div');
-    t.className = 'toast';
-    t.innerText = msg;
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 2000);
-}
-
-/**
- * 5. 소환 및 수학 문제 시스템
- */
-function openSummon() {
-    if(gameState.gold < 100) {
-        showToast("골드가 부족합니다! (100G 필요)");
-        return;
-    }
-    
-    if(gameState.mode === 'student') {
-        generateMathQuestion();
-    } else {
-        gameState.gold -= 100;
-        executeSummon();
-    }
-}
-
-function generateMathQuestion() {
-    let pool = MATH_DB[gameState.unit] || MATH_DB['분수의 나눗셈'];
-    let q = pool[Math.floor(Math.random() * pool.length)];
-    
-    document.getElementById('math-question').innerText = q.q + " = ?";
-    let grid = document.getElementById('math-answers');
-    grid.innerHTML = '';
-    
-    let answers = [q.a, ...q.wr];
-    answers.sort(() => Math.random() - 0.5); // 섞기
-    
-    answers.forEach(ans => {
-        let btn = document.createElement('button');
-        btn.className = 'answer-btn';
-        btn.innerText = ans;
-        btn.onclick = () => checkAnswer(ans, q.a);
-        grid.appendChild(btn);
-    });
-    
-    document.getElementById('math-modal').classList.remove('hidden');
-}
-
-function checkAnswer(selected, correct) {
-    document.getElementById('math-modal').classList.add('hidden');
-    if(selected === correct) {
-        gameState.gold -= 100;
-        showToast("정답입니다! 영웅을 소환합니다.");
-        executeSummon();
-    } else {
-        showToast("오답입니다... 소환에 실패했습니다.");
-    }
-}
-
-function executeSummon() {
-    let rand = Math.random();
-    let cumulative = 0;
-    let selectedHero = HERO_DB[0];
-
-    for(let hero of HERO_DB) {
-        cumulative += hero.prob;
-        if(rand <= cumulative) {
-            selectedHero = hero;
-            break;
-        }
+function update(dt) {
+    // Spawn enemies
+    state.spawnTimer += dt;
+    if (state.enemiesToSpawn > 0 && state.spawnTimer > 1.5) {
+        state.enemies.push({
+            x: 0, y: 250, hp: 50 + (state.wave * 30), maxHp: 50 + (state.wave * 30), speed: 60 + (state.wave * 5)
+        });
+        state.enemiesToSpawn--;
+        state.spawnTimer = 0;
     }
 
-    gameState.inventory.push(selectedHero);
-    showToast(`[${selectedHero.tier}] ${selectedHero.name} 획득!`);
-    updateUI();
-}
-
-/**
- * 6. 배치 시스템
- */
-function toggleInventory() {
-    if(gameState.inventory.length === 0) {
-        showToast("배치할 영웅이 없습니다.");
-        return;
-    }
-    
-    // 단순화를 위해 인벤토리의 첫 번째 영웅을 배치 대기 상태로 만듦
-    gameState.placingHero = gameState.inventory.shift();
-    showToast(`${gameState.placingHero.name} 배치 모드! 맵을 터치하세요.`);
-    updateUI();
-}
-
-canvas.addEventListener('click', (e) => {
-    if(!gameState.placingHero) return;
-    
-    let rect = canvas.getBoundingClientRect();
-    // 캔버스 실제 크기와 CSS 크기 비율 보정
-    let scaleX = canvas.width / rect.width;
-    let scaleY = canvas.height / rect.height;
-    
-    let x = (e.clientX - rect.left) * scaleX;
-    let y = (e.clientY - rect.top) * scaleY;
-    
-    // 경로 위에 설치 방지 (간단한 거리 체크)
-    let onPath = false;
-    for(let i=0; i<PATH.length-1; i++) {
-        let p1 = PATH[i], p2 = PATH[i+1];
-        // 선분과의 거리 계산 (단순화: 박스 충돌로 대체)
-        let minX = Math.min(p1.x, p2.x) - 20;
-        let maxX = Math.max(p1.x, p2.x) + 20;
-        let minY = Math.min(p1.y, p2.y) - 20;
-        let maxY = Math.max(p1.y, p2.y) + 20;
-        if(x >= minX && x <= maxX && y >= minY && y <= maxY) {
-            onPath = true;
-            break;
-        }
-    }
-
-    if(onPath) {
-        showToast("길 위에는 배치할 수 없습니다!");
-        gameState.inventory.unshift(gameState.placingHero); // 취소, 원상복구
-    } else {
-        gameState.towers.push(new Tower(x, y, gameState.placingHero));
-        showToast("배치 완료!");
-    }
-    
-    gameState.placingHero = null;
-    updateUI();
-});
-
-/**
- * 7. 메인 게임 루프 및 렌더링
- */
-function gameLoop(time) {
-    if(!gameState.isPlaying) return;
-    
-    let dt = (time - lastTime) / 1000;
-    lastTime = time;
-    
-    // 웨이브 스폰 로직
-    if(spawnCount < enemiesToSpawn) {
-        waveTimer += dt * gameState.speed;
-        if(waveTimer > 1.5) {
-            let hp = 20 * Math.pow(1.2, gameState.wave);
-            let spd = 40 + (gameState.wave * 2);
-            let rew = 10;
-            
-            // 매 10웨이브마다 보스
-            let isBoss = (gameState.wave % 10 === 0 && spawnCount === enemiesToSpawn - 1);
-            if(isBoss) {
-                hp *= 10;
-                rew = 100;
+    // Move enemies
+    state.enemies.forEach((en, index) => {
+        en.x += en.speed * dt;
+        if (en.x > canvas.width) {
+            state.hp--;
+            state.enemies.splice(index, 1);
+            updateHUD();
+            if (state.hp <= 0) {
+                state.isGameOver = true;
+                alert("GAME OVER! 기지가 파괴되었습니다.");
+                showScreen('screen-title');
             }
-            
-            gameState.enemies.push(new Enemy(hp, spd, rew, isBoss));
-            spawnCount++;
-            waveTimer = 0;
         }
-    } else if(gameState.enemies.length === 0) {
-        // 웨이브 클리어
-        gameState.wave++;
-        startWave();
-        updateUI();
+    });
+
+    // Wave Clear
+    if (state.enemiesToSpawn === 0 && state.enemies.length === 0) {
+        state.wave++;
+        state.enemiesToSpawn = 5 + Math.floor(state.wave / 2);
+        state.gold += 100;
+        updateHUD();
     }
 
-    // 업데이트
-    gameState.enemies.forEach(e => e.update(dt));
-    gameState.enemies = gameState.enemies.filter(e => e.hp > 0);
-    
-    gameState.towers.forEach(t => t.update(dt));
-    
-    gameState.projectiles.forEach(p => p.update(dt));
-    gameState.projectiles = gameState.projectiles.filter(p => p.active);
+    // Hero Attack
+    state.placedHeroes.forEach(hero => {
+        hero.lastShot += dt;
+        if (hero.lastShot >= hero.spd) {
+            // Find target
+            const target = state.enemies.find(en => {
+                const dist = Math.hypot(en.x - hero.x, en.y - hero.y);
+                return dist < hero.range;
+            });
 
-    // 렌더링
-    drawGame();
+            if (target) {
+                state.projectiles.push({
+                    x: hero.x, y: hero.y, tx: target.x, ty: target.y, dmg: hero.dmg, speed: 300, target: target
+                });
+                hero.lastShot = 0;
+            }
+        }
+    });
 
-    requestAnimationFrame(gameLoop);
+    // Projectiles
+    state.projectiles.forEach((p, index) => {
+        const dx = p.tx - p.x;
+        const dy = p.ty - p.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 5) {
+            p.target.hp -= p.dmg;
+            if (p.target.hp <= 0) {
+                const enIdx = state.enemies.indexOf(p.target);
+                if (enIdx > -1) {
+                    state.enemies.splice(enIdx, 1);
+                    state.gold += 20;
+                    updateHUD();
+                }
+            }
+            state.projectiles.splice(index, 1);
+        } else {
+            p.x += (dx / dist) * p.speed * dt;
+            p.y += (dy / dist) * p.speed * dt;
+        }
+    });
 }
 
-function drawGame() {
-    // 배경 (풀밭 느낌)
-    ctx.fillStyle = '#2d5a27';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // 장식용 패턴
-    ctx.fillStyle = '#346b2d';
-    for(let i=0; i<50; i++) {
-        let px = (Math.sin(i*7) * 400 + 400);
-        let py = (Math.cos(i*3) * 300 + 300);
-        ctx.fillRect(px, py, 15, 15);
-    }
+function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 길 그리기
-    ctx.strokeStyle = '#8b5a2b';
-    ctx.lineWidth = 40;
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(PATH[0].x, PATH[0].y);
-    for(let i=1; i<PATH.length; i++) {
-        ctx.lineTo(PATH[i].x, PATH[i].y);
-    }
-    ctx.stroke();
-    
-    // 기지 그리기
-    let end = PATH[PATH.length-1];
-    ctx.fillStyle = '#444';
-    ctx.fillRect(end.x - 30, end.y - 40, 60, 80);
-    ctx.fillStyle = '#ffaa00';
-    ctx.font = '20px DungGeunMo';
-    ctx.fillText('기지', end.x, end.y - 50);
+    // Draw Map (Road)
+    ctx.fillStyle = "#332211";
+    ctx.fillRect(0, 230, canvas.width, 40);
 
-    // 엔티티 그리기
-    gameState.towers.forEach(t => t.draw(ctx));
-    gameState.enemies.forEach(e => e.draw(ctx));
-    gameState.projectiles.forEach(p => p.draw(ctx));
+    // Draw Slots
+    state.placedSlots.forEach(slot => {
+        ctx.strokeStyle = slot.occupied ? "#555" : "#fff";
+        ctx.setLineDash([5, 5]);
+        ctx.strokeRect(slot.x - 20, slot.y - 20, 40, 40);
+        ctx.setLineDash([]);
+    });
 
-    // 배치 중 UI 표시
-    if(gameState.placingHero) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#fff';
-        ctx.font = '24px DungGeunMo';
-        ctx.textAlign = 'center';
-        ctx.fillText("맵을 터치하여 영웅을 배치하세요", canvas.width/2, 50);
+    // Draw Heroes
+    state.placedHeroes.forEach(hero => {
+        const img = imgCache[hero.img.split('.')[0].replace('-', '_')]; // 간단한 매핑
+        // 실제 경로는 ASSETS 키와 다를 수 있으므로 매핑 로직 강화 가능
+        // 여기서는 등급 색상 원으로 대체 로직 포함
+        
+        ctx.fillStyle = hero.color;
+        ctx.beginPath();
+        ctx.arc(hero.x, hero.y, 15, 0, Math.PI*2);
+        ctx.fill();
+
+        // 영웅 이름 (픽셀 텍스트 느낌)
+        ctx.fillStyle = "white";
+        ctx.font = "10px DungGeunMo";
+        ctx.textAlign = "center";
+        ctx.fillText(hero.name, hero.x, hero.y - 25);
+    });
+
+    // Draw Enemies
+    state.enemies.forEach(en => {
+        ctx.fillStyle = "#ff3e3e";
+        ctx.fillRect(en.x - 10, en.y - 10, 20, 20);
+        // HP Bar
+        ctx.fillStyle = "red";
+        ctx.fillRect(en.x - 15, en.y - 20, 30, 4);
+        ctx.fillStyle = "green";
+        ctx.fillRect(en.x - 15, en.y - 20, 30 * (en.hp / en.maxHp), 4);
+    });
+
+    // Draw Projectiles
+    state.projectiles.forEach(p => {
+        ctx.fillStyle = "yellow";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+        ctx.fill();
+    });
+
+    if (state.isGameOver) {
+        ctx.fillStyle = "rgba(0,0,0,0.7)";
+        ctx.fillRect(0,0,canvas.width, canvas.height);
+        ctx.fillStyle = "white";
+        ctx.font = "40px DungGeunMo";
+        ctx.textAlign = "center";
+        ctx.fillText("GAME OVER", canvas.width/2, canvas.height/2);
     }
 }
+
+/**
+ * SAVE / LOAD
+ */
+function saveGame() {
+    localStorage.setItem('hyunchul_save', JSON.stringify({
+        grade: state.grade,
+        unit: state.unit
+    }));
+}
+
+function loadGame() {
+    const saved = localStorage.getItem('hyunchul_save');
+    if (saved) {
+        const parsed = JSON.parse(saved);
+        state.grade = parsed.grade;
+        state.unit = parsed.unit;
+    }
+}
+
+function resetSave() {
+    if(confirm("모든 데이터를 초기화할까요?")) {
+        localStorage.removeItem('hyunchul_save');
+        location.reload();
+    }
+}
+
+// Start the game
+init();
+
 </script>
 </body>
 </html>
