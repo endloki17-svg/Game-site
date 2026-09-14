@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Geometry Dash - Web Edition (Modular & Air Combat)</title>
+    <title>Geometry Dash - Web Edition (Level Editor & Easy Mode)</title>
     <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -17,7 +17,7 @@
 
         #game-container {
             position: relative; width: 800px; height: 480px;
-            box-shadow: 0 0 50px rgba(255, 0, 150, 0.4);
+            box-shadow: 0 0 50px rgba(0, 150, 255, 0.4);
             background: linear-gradient(to bottom, #113, #001);
             overflow: hidden;
         }
@@ -28,7 +28,7 @@
             background-color: rgba(0, 0, 0, 0.85); z-index: 10; backdrop-filter: blur(5px);
         }
 
-        h1 { color: #00ffcc; text-shadow: 3px 3px 0px #ff0055; font-size: 28px; margin-bottom: 10px; text-align: center; line-height: 1.4;}
+        h1 { color: #00ffcc; text-shadow: 3px 3px 0px #ff0055; font-size: 26px; margin-bottom: 10px; text-align: center; line-height: 1.4;}
         h2 { color: #fff; font-size: 12px; margin-bottom: 15px; }
 
         .panel { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px;}
@@ -40,44 +40,70 @@
         }
 
         button {
-            padding: 12px 20px; font-family: 'Press Start 2P', cursive; font-size: 12px;
-            color: #fff; background-color: #ff0055; border: 3px solid #fff;
+            padding: 10px 15px; font-family: 'Press Start 2P', cursive; font-size: 10px;
+            color: #fff; background-color: #ff0055; border: 2px solid #fff;
             cursor: pointer; transition: transform 0.1s, background-color 0.2s; margin: 5px; outline: none;
         }
         button:hover { background-color: #ff3377; transform: scale(1.05); }
         button:disabled { background-color: #555; border-color: #777; cursor: not-allowed; }
 
-        canvas { display: block; width: 100%; height: 100%; }
+        canvas { display: block; }
         .hidden { display: none !important; }
         
-        #result-box { display: flex; gap: 10px; }
+        /* 맵 에디터 UI 스타일 */
+        #editor-ui { width: 100%; height: 100%; display: flex; flex-direction: column; background: #111; position: absolute; z-index: 20;}
+        #editor-toolbar { display: flex; padding: 10px; background: #222; gap: 5px; justify-content: center; flex-wrap: wrap; border-bottom: 3px solid #00ffcc;}
+        .tool-btn { background: #333; }
+        .tool-btn.active { background: #00ffcc; color: #000; border-color: #000; }
+        #editor-scroll { flex: 1; overflow-x: auto; overflow-y: hidden; background: linear-gradient(to bottom, #113, #001); }
+        #editorCanvas { cursor: crosshair; }
     </style>
 </head>
 <body>
 
 <div id="game-container">
     <div id="lobby" class="screen">
-        <h1>GEOMETRY DASH<br><span style="font-size: 14px; color:#ffaa00;">V5: AIR COMBAT & MODULAR</span></h1>
+        <h1>GEOMETRY DASH<br><span style="font-size: 14px; color:#ffaa00;">V6: LEVEL EDITOR & EASY MODE</span></h1>
         
         <select id="stage-select"></select>
 
-        <div class="panel" style="display: flex; flex-direction: column; align-items: center;">
-            <button id="solo-btn" style="background-color: #00ffcc; color: #000; border-color: #000; width: 100%;">솔로 플레이 시작</button>
+        <div class="panel" style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <button id="solo-btn" style="background-color: #00ffcc; color: #000; border-color: #000; width: 100%; font-size: 14px; padding: 15px;">▶ 솔로 플레이</button>
+            <button id="editor-btn" style="background-color: #ffeb3b; color: #000; border-color: #000; width: 100%; font-size: 12px;">🛠️ 맵 만들기 (에디터)</button>
         </div>
 
-        <div class="panel">
-            <h2>멀티플레이 (내 ID: <span id="my-id">생성 중...</span>)</h2>
-            <button id="host-btn" disabled>방 만들기</button><br><br>
-            <input type="text" id="target-id" placeholder="친구 ID 입력"><br>
-            <button id="join-btn" disabled>접속하기</button>
+        <div class="panel" style="padding: 10px;">
+            <h2 style="margin-bottom: 5px;">멀티플레이 (내 ID: <span id="my-id">생성 중...</span>)</h2>
+            <button id="host-btn" disabled>방 만들기</button>
+            <input type="text" id="target-id" placeholder="친구 ID 입력" style="width: 150px;">
+            <button id="join-btn" disabled>접속</button>
+            <p id="status-msg" style="color:#00ffcc; font-size:9px; margin-top:5px;"></p>
         </div>
-        <p id="status-msg" style="color:#00ffcc; font-size:10px;"></p>
+    </div>
+
+    <!-- 맵 에디터 화면 -->
+    <div id="editor-ui" class="hidden">
+        <div id="editor-toolbar">
+            <button class="tool-btn active" onclick="setTool('X', this)">블록(X)</button>
+            <button class="tool-btn" onclick="setTool('^', this)">가시(^)</button>
+            <button class="tool-btn" onclick="setTool('S', this)">비행기포털(S)</button>
+            <button class="tool-btn" onclick="setTool('U', this)">UFO포털(U)</button>
+            <button class="tool-btn" onclick="setTool('C', this)">큐브포털(C)</button>
+            <button class="tool-btn" onclick="setTool('F', this)">도착점(F)</button>
+            <button class="tool-btn" onclick="setTool('.', this)">지우개</button>
+            <div style="width: 10px;"></div>
+            <button onclick="playCustomMap()" style="background:#0f0; color:#000; border-color:#000;">▶ 만든 맵 플레이</button>
+            <button onclick="exitEditor()">나가기</button>
+        </div>
+        <div id="editor-scroll">
+            <canvas id="editorCanvas" width="4000" height="480"></canvas>
+        </div>
     </div>
 
     <div id="game-over" class="screen hidden">
         <h1 id="result-title">CRASHED!</h1>
         <p id="progress-text" style="color: #ffeb3b; margin-bottom: 30px; font-size: 16px;">Progress: 0%</p>
-        <div id="result-box">
+        <div style="display: flex; gap: 10px;">
             <button id="restart-btn" style="background-color: #00ffcc; color:#000;">다시 시작 (Space)</button>
             <button id="lobby-btn">로비로</button>
         </div>
@@ -114,7 +140,7 @@
         osc.start(); osc.stop(audioCtx.currentTime + 0.1);
     }
 
-    // 🚀 모듈형 맵 청크 시스템 (각 50칸짜리 패턴을 이어붙여 맵을 무한히 생성)
+    // 🚀 난이도 완화: 억까 패턴(벽 앞 가시, 좁은 통로) 제거 및 간격 확대
     const rawChunks = {
         C_FLAT: [
             "..................................................", "..................................................", "..................................................", "..................................................",
@@ -124,79 +150,43 @@
         C_START: [
             "..................................................", "..................................................", "..................................................", "..................................................",
             "..................................................", "..................................................", "..................................................", "..................................................",
-            "..................................................", "..................XXXXX...........................", ".......^..........XXXXX........^..........^.......", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+            "..................................................", "..................................................", ".......^.....................^....................", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         ],
-        C_JUMPS: [
+        C_JUMPS: [ // 벽 앞 가시 삭제, 점프 여유 공간 확보
             "..................................................", "..................................................", "..................................................", "..................................................",
             "..................................................", "..................................................", "..................................................", "..................................................",
-            ".......XXXXX......................XXXXX...........", ".......XXXXX...........^..........XXXXX...........", "..^....XXXXX......^...XXX....^....XXXXX......^....", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+            "..................................................", "...........XXXXX...................XXXXX..........", "..................................................", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         ],
         C_PLAT: [
             "..................................................", "..................................................", "..................................................", "..................................................",
-            "..................................................", "..................................................", "..................................................", "..........XXXXXX..................................",
-            "..........................XXXXXX..................", "..........................................XXXXXX..", "...^................^................^............", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        C_STAIRS: [
             "..................................................", "..................................................", "..................................................", "..................................................",
-            "..................................................", "..................................................", "..................................................", "................................XXXXXX............",
-            "........................XXXXXX..XXXXXX............", "................XXXXXX..XXXXXX..XXXXXX............", "........XXXXXX..XXXXXX..XXXXXX..XXXXXX...^....^...", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+            "..........................XXXXXX..................", "..........XXXXXX..................................", "..................................................", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         ],
-        C_HARD: [
-            "..................................................", "..................................................", "..................................................", "..................................................",
-            "..................................................", "..................................................", "..................................................", "...................XXXX...................XXXX....",
-            "......XXXX.........XXXX.......XXXX........XXXX....", "......XXXX...^.....XXXX...^...XXXX...^....XXXX....", "..^...XXXX..XXX....XXXX..XXX..XXXX..XXX...XXXX....", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        // 공중전 포털 전환 구역 (천장이 자연스럽게 닫히거나 열림)
+        // 공중전 포털 (천장 넓게 수정)
         U_TRANS: [
-            ".............................XXXXXXXXXXXXXXXXXXXXX", "..................................................", "..................................................", "..................................................",
+            "..................................................", "..................................................", "..................................................", "..................................................",
             "..................................................", "..................................................", "..................................................", ".......................U..........................",
             "..................................................", "..................................................", "..................................................", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         ],
         S_TRANS: [
-            ".............................XXXXXXXXXXXXXXXXXXXXX", "..................................................", "..................................................", "..................................................",
+            "..................................................", "..................................................", "..................................................", "..................................................",
             "..................................................", "..................................................", "..................................................", ".......................S..........................",
             "..................................................", "..................................................", "..................................................", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         ],
         C_TRANS: [
-            "XXXXXXXXXXXXXXXXXXXXX.............................", "..................................................", "..................................................", "..................................................",
+            "..................................................", "..................................................", "..................................................", "..................................................",
             "..................................................", "..................................................", "..................................................", ".......................C..........................",
             "..................................................", "..................................................", "..................................................", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         ],
-        // 비행기/UFO 공중 장애물 구역
-        U_OBS1: [
-            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", ".......XXXXX.............^..........XXXXXXX.......", "........^^^.............XXX..........^^^^^........", ".......................XXXXX......................",
-            "......................XXXXXXX.....................", "............XXXXX......^^^^^......................", ".............^^^........................XXXXX.....", ".........................................^^^......",
-            "..................................................", ".....^............................................", "....XXX......................^....................", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        U_OBS1: [ // 천장과 바닥 간격 대폭 확대
+            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", ".......XXXXX........................XXXXXXX.......", "..................................................", "..................................................",
+            "..................................................", "..................................................", "..................................................", "..................................................",
+            "..................................................", "..................................................", "....XXX......................XXX..................", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         ],
-        U_OBS2: [
-            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "XXXXXXXXXX..............................XXXXXXXXXX", "XXXXX................^.......................XXXXX", "XX..................XXX.....XXXXX...............XX",
-            "...................XXXXX.....^^^..................", ".......XXXXX........^^^...........................", "........^^^.......................XXXXX...........", "...................................^^^............",
-            "......................^...........................", "XXXXXXXXXXXXXXXXX....XXX................XXXXXXXXXX", "XXXXXXXXXXXXXXXXX...XXXXX...^..........XXXXXXXXXXX", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        U_FLAPPY1: [
-            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "XXXXXXX.........XXXXXXXXXXXXXXX................XXX", "XXXXXXX.........XXXXXXXXXXXXXXX................XXX", "XXXXXXX.........XXXXXXXXXXXXXXX................XXX",
-            ".......^^^^^....XXXXXXXXXXXXXXX....^^^^^.......XXX", "...............................................XXX", "..................................................", "..................................................",
-            ".......^^^^^.......................^^^^^..........", "XXXXXXX.........XXXXXXXXXXXXXXX.........XXXXXXXXXX", "XXXXXXX.........XXXXXXXXXXXXXXX.........XXXXXXXXXX", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        U_FLAPPY2: [
-            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "XXXXXXX.........................XXXXXXXXXXXXXXX...", "XXXXXXX.........................XXXXXXXXXXXXXXX...", "XXXXXXX.........................XXXXXXXXXXXXXXX...",
-            "XXXXXXX.....^^^^^...............XXXXXXXXXXXXXXX...", "XXXXXXX...........................................", "..................................................", "..................................................",
-            "....................^^^^^.......XXXXXXXXXXXXXXX...", "XXXXXXXXXXXXXXX.................XXXXXXXXXXXXXXX...", "XXXXXXXXXXXXXXX.................XXXXXXXXXXXXXXX...", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        S_TUN1: [
+        S_TUN1: [ // 4칸 이상 여유있는 터널
             "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "XXXXXXXXXX........................XXXXXXXXXXXXXXXX", "XXXXX..................................XXXXXXXXXXX", "XX..........................................XXXXXX",
-            "...............................................XXX", "......................XXXXXX......................", "......................XXXXXX......................", "XXX...............................................",
-            "XXXXXX..........................................XX", "XXXXXXXXXXX..................................XXXXX", "XXXXXXXXXXXXXXXX........^.........XXXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        S_TUN2: [
-            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "XXXXXXXXXX..........XXXXXXXX....................XX", "XXXXX...............XXXXXXXX.....................X", "XX..................XXXXXXXX......................",
-            "....................XXXXXXXX......................", ".......................^^.........................", "......................................^^..........", "...................................XXXXXXXX.......",
-            "...................................XXXXXXXX......X", "......^^...........................XXXXXXXX.....XX", "....XXXXXXX........................XXXXXXXX....XXX", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        S_HARD: [
-            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXX.......XXXXXX.......XXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXX.......XXXXXX.......XXXXXXXXXXXXXXX", "XXXX......XXXXX.......XXXXXX.......XXXXX......XXXX",
-            "XX..........XXX.......XXXXXX.......XXX..........XX", ".............XX.........^^.........XX.............", "..................................................", "XX......................^^......................XX",
-            "XXXX........XXX.......XXXXXX.......XXX........XXXX", "XXXXXXXXXX..XXX.......XXXXXX.......XXX..XXXXXXXXXX", "XXXXXXXXXXXXXXX.......XXXXXX.......XXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+            "..................................................", "..................................................", "..................................................", "..................................................",
+            "..................................................", "XXXXXXXXXXX..................................XXXXX", "XXXXXXXXXXXXXXXX..................XXXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         ],
         END: [
             "..................................................", "..................................................", "..................................................", "..................................................",
@@ -205,13 +195,11 @@
         ]
     };
 
-    // 문자열 길이를 정확히 50칸으로 보정 (픽셀 엇나감 방지)
     const chunks = {};
     for (let key in rawChunks) {
         chunks[key] = rawChunks[key].map(row => (row + "..................................................").slice(0, 50));
     }
 
-    // 모듈을 이어붙여 초대형 맵 생성 함수
     function buildMap(chunkList) {
         let map = ["", "", "", "", "", "", "", "", "", "", "", ""];
         chunkList.forEach(name => {
@@ -220,39 +208,138 @@
         return map;
     }
 
-    // 🚀 압도적인 길이(750칸)와 다양한 공중/지상 패턴의 5가지 스테이지
     const stages = [
-        { name: "Stage 1: 끝없는 워밍업", music: tunes[0], map: buildMap([
-            'C_FLAT', 'C_START', 'C_JUMPS', 'C_PLAT', 'C_STAIRS', 'U_TRANS', 'U_OBS1', 'U_OBS2', 'U_OBS1', 'C_TRANS', 'C_JUMPS', 'C_PLAT', 'C_HARD', 'C_FLAT', 'END'
-        ]) },
-        { name: "Stage 2: 어지러운 동굴 비행", music: tunes[1], map: buildMap([
-            'C_FLAT', 'S_TRANS', 'S_TUN1', 'S_TUN2', 'S_TUN1', 'S_TUN2', 'S_HARD', 'S_TUN1', 'S_TUN2', 'S_HARD', 'C_TRANS', 'C_STAIRS', 'C_JUMPS', 'C_FLAT', 'END'
-        ]) },
-        { name: "Stage 3: 3단 변신 롤러코스터", music: tunes[2], map: buildMap([
-            'C_FLAT', 'C_HARD', 'C_PLAT', 'U_TRANS', 'U_OBS2', 'U_FLAPPY1', 'U_FLAPPY2', 'S_TRANS', 'S_TUN2', 'S_HARD', 'S_TUN1', 'C_TRANS', 'C_HARD', 'C_FLAT', 'END'
-        ]) },
-        { name: "Stage 4: 플래피 버드 지옥", music: tunes[3], map: buildMap([
-            'C_FLAT', 'U_TRANS', 'U_FLAPPY1', 'U_FLAPPY2', 'U_FLAPPY1', 'U_FLAPPY2', 'U_OBS1', 'U_FLAPPY2', 'U_FLAPPY1', 'U_OBS2', 'C_TRANS', 'C_JUMPS', 'C_FLAT', 'C_FLAT', 'END'
-        ]) },
-        { name: "Stage 5: 마라톤 한계돌파", music: tunes[4], map: buildMap([
-            'C_FLAT', 'C_HARD', 'C_STAIRS', 'U_TRANS', 'U_OBS1', 'U_OBS2', 'S_TRANS', 'S_HARD', 'S_TUN2', 'C_TRANS', 'C_HARD', 'U_TRANS', 'U_FLAPPY2', 'C_TRANS', 'END'
-        ]) }
+        { name: "Stage 1: 순한맛 큐브", music: tunes[0], map: buildMap(['C_FLAT', 'C_START', 'C_PLAT', 'C_JUMPS', 'C_START', 'END']) },
+        { name: "Stage 2: 넓은 동굴 비행", music: tunes[1], map: buildMap(['C_FLAT', 'S_TRANS', 'S_TUN1', 'S_TUN1', 'C_TRANS', 'C_FLAT', 'END']) },
+        { name: "Stage 3: UFO 둥둥", music: tunes[2], map: buildMap(['C_FLAT', 'U_TRANS', 'U_OBS1', 'U_OBS1', 'C_TRANS', 'END']) }
     ];
 
-    stages.forEach((stage, idx) => {
-        let opt = document.createElement('option');
-        opt.value = idx; opt.innerText = stage.name;
-        stageSelect.appendChild(opt);
-    });
+    function populateStageSelect() {
+        stageSelect.innerHTML = "";
+        stages.forEach((stage, idx) => {
+            let opt = document.createElement('option');
+            opt.value = idx; opt.innerText = stage.name;
+            stageSelect.appendChild(opt);
+        });
+    }
+    populateStageSelect();
 
-    const BLOCK_SIZE = 40; let gameSpeed = 7.5;
+    /* =======================================
+       🛠️ 맵 에디터 기능 시작
+    ======================================= */
+    const editorUI = document.getElementById('editor-ui');
+    const editorCanvas = document.getElementById('editorCanvas');
+    const eCtx = editorCanvas.getContext('2d');
+    let customMapArray = Array(12).fill(".".repeat(100)); // 세로 12칸, 가로 100칸 (기본)
+    let currentEditTool = 'X';
+    let isDrawing = false;
+
+    function setTool(tool, btnElement) {
+        currentEditTool = tool;
+        document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+        if(btnElement) btnElement.classList.add('active');
+    }
+
+    function openEditor() {
+        uiLobby.classList.add('hidden');
+        editorUI.classList.remove('hidden');
+        customMapArray = Array(12).fill(".".repeat(100)); // 초기화
+        customMapArray[11] = "X".repeat(100); // 맨 밑바닥 기본 생성
+        drawEditorMap();
+    }
+
+    function exitEditor() {
+        editorUI.classList.add('hidden');
+        uiLobby.classList.remove('hidden');
+    }
+
+    function setCharAt(str, index, chr) {
+        if (index > str.length - 1) return str;
+        return str.substring(0, index) + chr + str.substring(index + 1);
+    }
+
+    function handleEditorDraw(e) {
+        if (!isDrawing) return;
+        const rect = editorCanvas.getBoundingClientRect();
+        // 스크롤 고려한 상대 좌표 계산
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        let col = Math.floor(x / 40);
+        let row = Math.floor(y / 40);
+
+        if (row >= 0 && row < 12 && col >= 0 && col < 100) {
+            customMapArray[row] = setCharAt(customMapArray[row], col, currentEditTool);
+            drawEditorMap();
+        }
+    }
+
+    editorCanvas.addEventListener('mousedown', (e) => { isDrawing = true; handleEditorDraw(e); });
+    window.addEventListener('mouseup', () => { isDrawing = false; });
+    editorCanvas.addEventListener('mousemove', handleEditorDraw);
+
+    function drawEditorMap() {
+        eCtx.clearRect(0, 0, editorCanvas.width, editorCanvas.height);
+        
+        // 그리드 그리기
+        eCtx.strokeStyle = '#333'; eCtx.lineWidth = 1;
+        for(let i=0; i<=100; i++) { eCtx.beginPath(); eCtx.moveTo(i*40, 0); eCtx.lineTo(i*40, 480); eCtx.stroke(); }
+        for(let i=0; i<=12; i++) { eCtx.beginPath(); eCtx.moveTo(0, i*40); eCtx.lineTo(4000, i*40); eCtx.stroke(); }
+
+        // 블록 그리기
+        for(let r=0; r<12; r++) {
+            for(let c=0; c<100; c++) {
+                let char = customMapArray[r][c];
+                let x = c * 40; let y = r * 40;
+                
+                if(char === 'X') {
+                    eCtx.fillStyle = '#114'; eCtx.fillRect(x, y, 40, 40);
+                    eCtx.strokeStyle = '#00ffcc'; eCtx.lineWidth=2; eCtx.strokeRect(x, y, 40, 40);
+                } else if(char === '^') {
+                    eCtx.fillStyle = '#ff0055'; eCtx.beginPath();
+                    eCtx.moveTo(x+20, y); eCtx.lineTo(x+40, y+40); eCtx.lineTo(x, y+40); eCtx.fill();
+                } else if(char === 'S' || char === 'U' || char === 'C') {
+                    eCtx.lineWidth = 4;
+                    eCtx.strokeStyle = char === 'S' ? '#ff00ff' : (char === 'C' ? '#00ff00' : '#ffaa00');
+                    eCtx.beginPath(); eCtx.ellipse(x+20, y+40, 15, 40, 0, 0, Math.PI*2); eCtx.stroke();
+                    eCtx.fillStyle = eCtx.strokeStyle; eCtx.font = '14px sans-serif'; eCtx.fillText(char, x+13, y+45);
+                } else if(char === 'F') {
+                    eCtx.fillStyle = 'rgba(255, 255, 255, 0.7)'; eCtx.fillRect(x, 0, 10, 480);
+                    eCtx.font = '12px sans-serif'; eCtx.fillText("FIN", x-10, y+20);
+                }
+            }
+        }
+    }
+
+    function playCustomMap() {
+        // 커스텀 맵을 스테이지 목록에 추가하고 즉시 실행
+        let customStage = { name: "Custom Level (에디터)", music: tunes[4], map: [...customMapArray] };
+        
+        // 기존에 커스텀 레벨이 있으면 덮어쓰기
+        if(stages[stages.length-1].name.includes("Custom Level")) {
+            stages[stages.length-1] = customStage;
+        } else {
+            stages.push(customStage);
+        }
+        populateStageSelect();
+        stageSelect.value = stages.length - 1; // 방금 만든 맵 선택
+        
+        exitEditor();
+        document.getElementById('solo-btn').click(); // 자동 시작
+    }
+
+    document.getElementById('editor-btn').addEventListener('click', openEditor);
+    /* =======================================
+       게임 코어 엔진
+    ======================================= */
+
+    const BLOCK_SIZE = 40; let gameSpeed = 6.5; // 너무 빠르지 않게 스피드 조절 (난이도 완화)
     let isPlaying = false, isHolding = false;
     let animationId, cameraX = 0, frame = 0, currentStageIndex = 0;
 
     const player = { x: 150, y: 0, size: 30, dy: 0, mode: 'cube', rotation: 0, grounded: false, dead: false, jumpQueued: false };
     const peerPlayer = { active: false, camX: 0, y: 0, rot: 0, mode: 'cube', dead: false };
     let peer = null, conn = null, isHost = false, isMultiplayer = false;
-
     let blocks = [], spikes = [], portals = [], finishLine = null, maxLevelWidth = 0;
 
     function loadLevel(index) {
@@ -283,7 +370,7 @@
         });
         peer.on('connection', c => {
             conn = c; setupConnection(); isHost = true;
-            document.getElementById('status-msg').innerText = "친구가 접속했습니다! 시작을 눌러주세요.";
+            document.getElementById('status-msg').innerText = "친구가 접속했습니다! 솔로 플레이 버튼이 멀티로 변경됩니다.";
         });
     }
 
@@ -305,6 +392,7 @@
 
     function setupConnection() {
         isMultiplayer = true; peerPlayer.active = true;
+        document.getElementById('solo-btn').innerText = "▶ 멀티플레이 시작";
         conn.on('data', d => {
             if(d.type === 'start') { stageSelect.value = d.stage; startGame(d.stage); }
             else if(d.type === 'sync') {
@@ -315,7 +403,7 @@
     }
 
     document.getElementById('solo-btn').addEventListener('click', () => {
-        isMultiplayer = false; peerPlayer.active = false; 
+        if(!isMultiplayer) { peerPlayer.active = false; }
         startGame(parseInt(stageSelect.value));
     });
 
@@ -359,26 +447,26 @@
         if (player.dead) return;
 
         if (player.mode === 'cube') {
-            player.dy += 1.3;
+            player.dy += 1.2;
             if (player.jumpQueued && player.grounded) { 
-                player.dy = -16.5; player.grounded = false; playJumpSound(); 
+                player.dy = -15; player.grounded = false; playJumpSound(); 
             }
             player.dy = Math.max(-18, Math.min(player.dy, 18));
-            if (!player.grounded) player.rotation += 6.5;
+            if (!player.grounded) player.rotation += 6;
             else player.rotation = Math.round(player.rotation / 90) * 90;
 
         } else if (player.mode === 'ship') {
-            if (isHolding) player.dy -= 0.8; 
-            else player.dy += 0.7;
-            player.dy = Math.max(-8, Math.min(player.dy, 8));
+            if (isHolding) player.dy -= 0.7; 
+            else player.dy += 0.6;
+            player.dy = Math.max(-7, Math.min(player.dy, 7));
             player.rotation = player.dy * 3;
 
         } else if (player.mode === 'ufo') {
-            player.dy += 1.2;
+            player.dy += 1.1;
             if (player.jumpQueued) {
-                player.dy = -10.5; playJumpSound();
+                player.dy = -10; playJumpSound();
             }
-            player.dy = Math.max(-14, Math.min(player.dy, 14));
+            player.dy = Math.max(-13, Math.min(player.dy, 13));
             player.rotation += (player.dy * 0.5);
         }
 
@@ -387,16 +475,13 @@
         player.y += player.dy;
         player.grounded = false;
         
-        let hitWall = false;
-        let shipHitBlock = false;
+        let hitWall = false, shipHitBlock = false;
         const pRect = { x: player.x, y: player.y, w: player.size, h: player.size };
 
         for (let b of blocks) {
             let bRect = { x: b.x - cameraX, y: b.y, w: b.size, h: b.size };
             if (checkAABB(pRect, bRect)) {
-                if (player.mode === 'ship') {
-                    shipHitBlock = true; break;
-                }
+                if (player.mode === 'ship') { shipHitBlock = true; break; }
                 
                 let overLeft = (pRect.x + pRect.w) - bRect.x;
                 let overRight = (bRect.x + bRect.w) - pRect.x;
@@ -405,11 +490,9 @@
 
                 if (overTop <= 20 && player.dy >= 0) { 
                     player.y = bRect.y - player.size; player.dy = 0; player.grounded = true; 
-                } 
-                else if (overBot <= 20 && player.dy < 0) { 
+                } else if (overBot <= 20 && player.dy < 0) { 
                     player.y = bRect.y + bRect.h; player.dy = 0; 
-                } 
-                else { 
+                } else { 
                     if (overLeft > 4 && overRight > 4) hitWall = true; 
                 }
                 pRect.y = player.y; 
@@ -422,8 +505,9 @@
             if (hitWall || player.y < -50 || player.y > canvas.height + 50) die();
         }
 
+        // 가시 충돌 판정 완화 (16px 여백 -> 20px로 좀 더 관대하게 수정)
         for (let s of spikes) {
-            let sRect = { x: s.x - cameraX + 8, y: s.y + 16, w: s.size - 16, h: s.size - 16 };
+            let sRect = { x: s.x - cameraX + 10, y: s.y + 20, w: s.size - 20, h: s.size - 20 };
             if (checkAABB(pRect, sRect, 0)) die();
         }
 
@@ -431,14 +515,14 @@
             let pt = portals[i];
             let ptRect = { x: pt.x - cameraX, y: pt.y, w: BLOCK_SIZE, h: BLOCK_SIZE * 2 };
             if (checkAABB(pRect, ptRect)) {
-                if (pt.type === 'S') player.mode = 'ship';
-                else if (pt.type === 'C') player.mode = 'cube';
-                else if (pt.type === 'U') player.mode = 'ufo';
+                player.mode = pt.type === 'S' ? 'ship' : (pt.type === 'U' ? 'ufo' : 'cube');
                 portals.splice(i, 1);
             }
         }
 
         if (finishLine && finishLine.x - cameraX < player.x) winGame();
+        // 유저가 만든 맵에서 F를 안 넣었을 경우 카메라 끝 도달시 자동 클리어
+        if (!finishLine && (cameraX + player.x > maxLevelWidth - 100)) winGame();
     }
 
     function die() {
@@ -466,16 +550,8 @@
                 ctx.fillStyle = '#ff9900'; ctx.fillRect(-p.size/2 - 15, -5, 15, 10);
             }
         } else if (p.mode === 'ufo') {
-            ctx.beginPath();
-            ctx.arc(0, 0, p.size/2.5, Math.PI, 0);
-            ctx.fillStyle = 'rgba(200, 255, 255, 0.8)'; ctx.fill(); ctx.stroke();
-            ctx.beginPath();
-            ctx.ellipse(0, p.size/6, p.size/1.2, p.size/3.5, 0, 0, Math.PI*2);
-            ctx.fillStyle = color; ctx.fill(); ctx.stroke();
-            if(!isGhost && player.dy < 0) {
-                ctx.fillStyle = '#00ffff';
-                ctx.beginPath(); ctx.arc(0, p.size/2, 5, 0, Math.PI*2); ctx.fill();
-            }
+            ctx.beginPath(); ctx.arc(0, 0, p.size/2.5, Math.PI, 0); ctx.fillStyle = 'rgba(200, 255, 255, 0.8)'; ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.ellipse(0, p.size/6, p.size/1.2, p.size/3.5, 0, 0, Math.PI*2); ctx.fillStyle = color; ctx.fill(); ctx.stroke();
         }
         ctx.restore();
     }
@@ -492,8 +568,7 @@
         ctx.fillStyle = '#114'; ctx.strokeStyle = '#00ffcc'; ctx.lineWidth = 2;
         for (let b of blocks) {
             if (b.x - cameraX > canvas.width || b.x - cameraX < -BLOCK_SIZE) continue;
-            ctx.fillRect(b.x - cameraX, b.y, b.size, b.size);
-            ctx.strokeRect(b.x - cameraX, b.y, b.size, b.size);
+            ctx.fillRect(b.x - cameraX, b.y, b.size, b.size); ctx.strokeRect(b.x - cameraX, b.y, b.size, b.size);
         }
 
         ctx.fillStyle = '#ff0055'; ctx.strokeStyle = '#fff';
@@ -507,20 +582,13 @@
         for (let pt of portals) {
             if (pt.x - cameraX > canvas.width || pt.x - cameraX < -BLOCK_SIZE) continue;
             ctx.lineWidth = 4;
-            if (pt.type === 'S') ctx.strokeStyle = '#ff00ff';
-            else if (pt.type === 'C') ctx.strokeStyle = '#00ff00';
-            else if (pt.type === 'U') ctx.strokeStyle = '#ffaa00';
-            
-            ctx.beginPath();
-            ctx.ellipse(pt.x - cameraX + BLOCK_SIZE/2, pt.y + BLOCK_SIZE, 15, BLOCK_SIZE, 0, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.fillStyle = ctx.strokeStyle; ctx.font = '14px "Press Start 2P"';
-            ctx.fillText(pt.type, pt.x - cameraX + 13, pt.y + BLOCK_SIZE + 5);
+            ctx.strokeStyle = pt.type === 'S' ? '#ff00ff' : (pt.type === 'C' ? '#00ff00' : '#ffaa00');
+            ctx.beginPath(); ctx.ellipse(pt.x - cameraX + BLOCK_SIZE/2, pt.y + BLOCK_SIZE, 15, BLOCK_SIZE, 0, 0, Math.PI * 2); ctx.stroke();
+            ctx.fillStyle = ctx.strokeStyle; ctx.font = '14px "Press Start 2P"'; ctx.fillText(pt.type, pt.x - cameraX + 13, pt.y + BLOCK_SIZE + 5);
         }
 
         if (finishLine) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-            ctx.fillRect(finishLine.x - cameraX, 0, 10, canvas.height);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; ctx.fillRect(finishLine.x - cameraX, 0, 10, canvas.height);
         }
 
         if (isMultiplayer && peerPlayer.active) {
@@ -564,29 +632,22 @@
         uiLobby.classList.add('hidden'); uiGameOver.classList.add('hidden');
         isPlaying = true; animate();
         
-        bgm.currentTime = 0;
-        bgm.play().catch(e => console.log("BGM 재생 막힘:", e));
+        bgm.currentTime = 0; bgm.play().catch(e => console.log("BGM 재생 에러:", e));
     }
 
     function gameOver(msg) {
-        isPlaying = false; cancelAnimationFrame(animationId);
-        bgm.pause();
+        isPlaying = false; cancelAnimationFrame(animationId); bgm.pause();
         document.getElementById('result-title').innerText = msg;
-        document.getElementById('result-title').style.color = "#ff0055";
+        document.getElementById('result-title').style.color = msg === "LEVEL CLEARED!" ? "#00ffcc" : "#ff0055";
         let p = Math.min(100, Math.floor(((player.x + cameraX) / maxLevelWidth) * 100));
         document.getElementById('progress-text').innerText = `Progress: ${p}%`;
         
-        if(isMultiplayer) document.getElementById('restart-btn').style.display = 'none';
-        else document.getElementById('restart-btn').style.display = 'block';
-
+        document.getElementById('restart-btn').style.display = isMultiplayer ? 'none' : 'block';
+        document.getElementById('restart-btn').innerText = msg === "LEVEL CLEARED!" ? "다시 하기 (Space)" : "다시 시작 (Space)";
         uiGameOver.classList.remove('hidden');
     }
 
-    function winGame() {
-        gameOver("LEVEL CLEARED!");
-        document.getElementById('result-title').style.color = "#00ffcc";
-        document.getElementById('restart-btn').innerText = "다시 하기 (Space)";
-    }
+    function winGame() { gameOver("LEVEL CLEARED!"); }
 
     document.getElementById('lobby-btn').addEventListener('click', () => {
         uiGameOver.classList.add('hidden'); uiLobby.classList.remove('hidden');
@@ -595,4 +656,4 @@
     initPeer();
 </script>
 </body>
-    </html>
+</html>
