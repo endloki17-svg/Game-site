@@ -2,597 +2,318 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Geometry Dash - Web Edition (Modular & Air Combat)</title>
-    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>모던 노트 플랫폼</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        /* 기본 스타일 초기화 및 웹 폰트 적용 */
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        
+        * {
+            box-sizing: border-box;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+        }
 
         body {
-            margin: 0; background-color: #0b0b1a; color: #fff;
-            font-family: 'Press Start 2P', cursive;
-            display: flex; justify-content: center; align-items: center; height: 100vh;
-            overflow: hidden; user-select: none; touch-action: none;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            background-color: #f5f5f7;
+            color: #333;
         }
 
-        #game-container {
-            position: relative; width: 800px; height: 480px;
-            box-shadow: 0 0 50px rgba(255, 0, 150, 0.4);
-            background: linear-gradient(to bottom, #113, #001);
+        /* 사이드바 스타일 */
+        #sidebar {
+            width: 320px;
+            background-color: #f9f9f9;
+            border-right: 1px solid #e5e5e5;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.02);
+        }
+
+        #sidebar-header {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        #sidebar-header h2 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #1d1d1f;
+        }
+
+        .btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #007aff;
+            color: white;
+        }
+
+        .btn-primary:hover { background-color: #005bb5; }
+
+        .btn-danger {
+            background-color: #ff3b30;
+            color: white;
+        }
+
+        .btn-danger:hover { background-color: #cc2f26; }
+
+        /* 노트 리스트 스타일 */
+        #note-list {
+            flex: 1;
+            overflow-y: auto;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .note-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #efefef;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .note-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .note-item.active {
+            background-color: #e8f0fe;
+            border-left: 4px solid #007aff;
+        }
+
+        .note-item-title {
+            margin: 0 0 5px 0;
+            font-size: 1rem;
+            font-weight: 600;
+            white-space: nowrap;
             overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            background-color: rgba(0, 0, 0, 0.85); z-index: 10; backdrop-filter: blur(5px);
+        .note-item-preview {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #888;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        h1 { color: #00ffcc; text-shadow: 3px 3px 0px #ff0055; font-size: 28px; margin-bottom: 10px; text-align: center; line-height: 1.4;}
-        h2 { color: #fff; font-size: 12px; margin-bottom: 15px; }
-
-        .panel { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px;}
-        
-        select, input {
-            padding: 10px; font-family: 'Press Start 2P', cursive; font-size: 12px;
-            margin-bottom: 10px; width: 280px; text-align: center; border: 2px solid #00ffcc;
-            background: #111; color: #00ffcc; outline: none; cursor: pointer;
+        /* 메인 에디터 영역 스타일 */
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #ffffff;
         }
 
-        button {
-            padding: 12px 20px; font-family: 'Press Start 2P', cursive; font-size: 12px;
-            color: #fff; background-color: #ff0055; border: 3px solid #fff;
-            cursor: pointer; transition: transform 0.1s, background-color 0.2s; margin: 5px; outline: none;
+        #editor-header {
+            padding: 20px 40px;
+            border-bottom: 1px solid #e5e5e5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        button:hover { background-color: #ff3377; transform: scale(1.05); }
-        button:disabled { background-color: #555; border-color: #777; cursor: not-allowed; }
 
-        canvas { display: block; width: 100%; height: 100%; }
-        .hidden { display: none !important; }
-        
-        #result-box { display: flex; gap: 10px; }
+        #note-title-input {
+            width: 70%;
+            border: none;
+            outline: none;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #1d1d1f;
+        }
+
+        #note-title-input::placeholder {
+            color: #cccccc;
+        }
+
+        #editor-body {
+            flex: 1;
+            padding: 20px 40px;
+            display: flex;
+        }
+
+        #note-content-input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            resize: none;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        #note-content-input::placeholder {
+            color: #cccccc;
+        }
+
+        /* 빈 상태(Empty State) 디자인 */
+        #empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #999;
+        }
+
+        #empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
 
-<div id="game-container">
-    <div id="lobby" class="screen">
-        <h1>GEOMETRY DASH<br><span style="font-size: 14px; color:#ffaa00;">V5: AIR COMBAT & MODULAR</span></h1>
-        
-        <select id="stage-select"></select>
-
-        <div class="panel" style="display: flex; flex-direction: column; align-items: center;">
-            <button id="solo-btn" style="background-color: #00ffcc; color: #000; border-color: #000; width: 100%;">솔로 플레이 시작</button>
+    <!-- 왼쪽 사이드바: 노트 목록 -->
+    <div id="sidebar">
+        <div id="sidebar-header">
+            <h2>내 노트</h2>
+            <button class="btn btn-primary" onclick="createNewNote()">+ 새 노트</button>
         </div>
-
-        <div class="panel">
-            <h2>멀티플레이 (내 ID: <span id="my-id">생성 중...</span>)</h2>
-            <button id="host-btn" disabled>방 만들기</button><br><br>
-            <input type="text" id="target-id" placeholder="친구 ID 입력"><br>
-            <button id="join-btn" disabled>접속하기</button>
-        </div>
-        <p id="status-msg" style="color:#00ffcc; font-size:10px;"></p>
+        <ul id="note-list">
+            <!-- 자바스크립트로 노트 목록이 렌더링 됩니다 -->
+        </ul>
     </div>
 
-    <div id="game-over" class="screen hidden">
-        <h1 id="result-title">CRASHED!</h1>
-        <p id="progress-text" style="color: #ffeb3b; margin-bottom: 30px; font-size: 16px;">Progress: 0%</p>
-        <div id="result-box">
-            <button id="restart-btn" style="background-color: #00ffcc; color:#000;">다시 시작 (Space)</button>
-            <button id="lobby-btn">로비로</button>
+    <!-- 오른쪽 메인: 노트 편집기 -->
+    <div id="main">
+        <div id="empty-state">
+            <h3>선택된 노트가 없습니다.</h3>
+            <p>왼쪽에서 노트를 선택하거나 새 노트를 작성해보세요.</p>
+        </div>
+
+        <div id="editor-container" style="display: none; height: 100%; flex-direction: column;">
+            <div id="editor-header">
+                <input type="text" id="note-title-input" placeholder="제목을 입력하세요..." oninput="autoSave()">
+                <button class="btn btn-danger" onclick="deleteCurrentNote()">삭제</button>
+            </div>
+            <div id="editor-body">
+                <textarea id="note-content-input" placeholder="내용을 작성하세요..." oninput="autoSave()"></textarea>
+            </div>
         </div>
     </div>
 
-    <canvas id="gameCanvas" width="800" height="480"></canvas>
-</div>
+    <script>
+        // 상태 관리
+        let notes = JSON.parse(localStorage.getItem('my_notes')) || [];
+        let currentNoteId = null;
 
-<script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const uiLobby = document.getElementById('lobby');
-    const uiGameOver = document.getElementById('game-over');
-    const stageSelect = document.getElementById('stage-select');
+        // DOM 요소
+        const noteListEl = document.getElementById('note-list');
+        const emptyStateEl = document.getElementById('empty-state');
+        const editorContainerEl = document.getElementById('editor-container');
+        const titleInput = document.getElementById('note-title-input');
+        const contentInput = document.getElementById('note-content-input');
 
-    const bgm = new Audio(); bgm.loop = true; bgm.volume = 0.5;
-    const tunes = [
-        "https://cdn.pixabay.com/download/audio/2021/08/09/audio_6b5c301662.mp3", 
-        "https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3", 
-        "https://cdn.pixabay.com/download/audio/2021/08/04/audio_0625c1539c.mp3", 
-        "https://cdn.pixabay.com/download/audio/2022/03/24/audio_51190bc7dd.mp3", 
-        "https://cdn.pixabay.com/download/audio/2021/09/06/audio_924b17f864.mp3"  
-    ];
+        // 초기 렌더링
+        renderNoteList();
 
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playJumpSound() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-        osc.type = 'square'; osc.frequency.setValueAtTime(250, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(450, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-    }
-
-    // 🚀 모듈형 맵 청크 시스템 (각 50칸짜리 패턴을 이어붙여 맵을 무한히 생성)
-    const rawChunks = {
-        C_FLAT: [
-            "..................................................", "..................................................", "..................................................", "..................................................",
-            "..................................................", "..................................................", "..................................................", "..................................................",
-            "..................................................", "..................................................", "..................................................", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        C_START: [
-            "..................................................", "..................................................", "..................................................", "..................................................",
-            "..................................................", "..................................................", "..................................................", "..................................................",
-            "..................................................", "..................XXXXX...........................", ".......^..........XXXXX........^..........^.......", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        C_JUMPS: [
-            "..................................................", "..................................................", "..................................................", "..................................................",
-            "..................................................", "..................................................", "..................................................", "..................................................",
-            ".......XXXXX......................XXXXX...........", ".......XXXXX...........^..........XXXXX...........", "..^....XXXXX......^...XXX....^....XXXXX......^....", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        C_PLAT: [
-            "..................................................", "..................................................", "..................................................", "..................................................",
-            "..................................................", "..................................................", "..................................................", "..........XXXXXX..................................",
-            "..........................XXXXXX..................", "..........................................XXXXXX..", "...^................^................^............", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        C_STAIRS: [
-            "..................................................", "..................................................", "..................................................", "..................................................",
-            "..................................................", "..................................................", "..................................................", "................................XXXXXX............",
-            "........................XXXXXX..XXXXXX............", "................XXXXXX..XXXXXX..XXXXXX............", "........XXXXXX..XXXXXX..XXXXXX..XXXXXX...^....^...", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        C_HARD: [
-            "..................................................", "..................................................", "..................................................", "..................................................",
-            "..................................................", "..................................................", "..................................................", "...................XXXX...................XXXX....",
-            "......XXXX.........XXXX.......XXXX........XXXX....", "......XXXX...^.....XXXX...^...XXXX...^....XXXX....", "..^...XXXX..XXX....XXXX..XXX..XXXX..XXX...XXXX....", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        // 공중전 포털 전환 구역 (천장이 자연스럽게 닫히거나 열림)
-        U_TRANS: [
-            ".............................XXXXXXXXXXXXXXXXXXXXX", "..................................................", "..................................................", "..................................................",
-            "..................................................", "..................................................", "..................................................", ".......................U..........................",
-            "..................................................", "..................................................", "..................................................", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        S_TRANS: [
-            ".............................XXXXXXXXXXXXXXXXXXXXX", "..................................................", "..................................................", "..................................................",
-            "..................................................", "..................................................", "..................................................", ".......................S..........................",
-            "..................................................", "..................................................", "..................................................", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        C_TRANS: [
-            "XXXXXXXXXXXXXXXXXXXXX.............................", "..................................................", "..................................................", "..................................................",
-            "..................................................", "..................................................", "..................................................", ".......................C..........................",
-            "..................................................", "..................................................", "..................................................", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        // 비행기/UFO 공중 장애물 구역
-        U_OBS1: [
-            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", ".......XXXXX.............^..........XXXXXXX.......", "........^^^.............XXX..........^^^^^........", ".......................XXXXX......................",
-            "......................XXXXXXX.....................", "............XXXXX......^^^^^......................", ".............^^^........................XXXXX.....", ".........................................^^^......",
-            "..................................................", ".....^............................................", "....XXX......................^....................", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        U_OBS2: [
-            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "XXXXXXXXXX..............................XXXXXXXXXX", "XXXXX................^.......................XXXXX", "XX..................XXX.....XXXXX...............XX",
-            "...................XXXXX.....^^^..................", ".......XXXXX........^^^...........................", "........^^^.......................XXXXX...........", "...................................^^^............",
-            "......................^...........................", "XXXXXXXXXXXXXXXXX....XXX................XXXXXXXXXX", "XXXXXXXXXXXXXXXXX...XXXXX...^..........XXXXXXXXXXX", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        U_FLAPPY1: [
-            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "XXXXXXX.........XXXXXXXXXXXXXXX................XXX", "XXXXXXX.........XXXXXXXXXXXXXXX................XXX", "XXXXXXX.........XXXXXXXXXXXXXXX................XXX",
-            ".......^^^^^....XXXXXXXXXXXXXXX....^^^^^.......XXX", "...............................................XXX", "..................................................", "..................................................",
-            ".......^^^^^.......................^^^^^..........", "XXXXXXX.........XXXXXXXXXXXXXXX.........XXXXXXXXXX", "XXXXXXX.........XXXXXXXXXXXXXXX.........XXXXXXXXXX", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        U_FLAPPY2: [
-            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "XXXXXXX.........................XXXXXXXXXXXXXXX...", "XXXXXXX.........................XXXXXXXXXXXXXXX...", "XXXXXXX.........................XXXXXXXXXXXXXXX...",
-            "XXXXXXX.....^^^^^...............XXXXXXXXXXXXXXX...", "XXXXXXX...........................................", "..................................................", "..................................................",
-            "....................^^^^^.......XXXXXXXXXXXXXXX...", "XXXXXXXXXXXXXXX.................XXXXXXXXXXXXXXX...", "XXXXXXXXXXXXXXX.................XXXXXXXXXXXXXXX...", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        S_TUN1: [
-            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "XXXXXXXXXX........................XXXXXXXXXXXXXXXX", "XXXXX..................................XXXXXXXXXXX", "XX..........................................XXXXXX",
-            "...............................................XXX", "......................XXXXXX......................", "......................XXXXXX......................", "XXX...............................................",
-            "XXXXXX..........................................XX", "XXXXXXXXXXX..................................XXXXX", "XXXXXXXXXXXXXXXX........^.........XXXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        S_TUN2: [
-            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "XXXXXXXXXX..........XXXXXXXX....................XX", "XXXXX...............XXXXXXXX.....................X", "XX..................XXXXXXXX......................",
-            "....................XXXXXXXX......................", ".......................^^.........................", "......................................^^..........", "...................................XXXXXXXX.......",
-            "...................................XXXXXXXX......X", "......^^...........................XXXXXXXX.....XX", "....XXXXXXX........................XXXXXXXX....XXX", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        S_HARD: [
-            "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXX.......XXXXXX.......XXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXX.......XXXXXX.......XXXXXXXXXXXXXXX", "XXXX......XXXXX.......XXXXXX.......XXXXX......XXXX",
-            "XX..........XXX.......XXXXXX.......XXX..........XX", ".............XX.........^^.........XX.............", "..................................................", "XX......................^^......................XX",
-            "XXXX........XXX.......XXXXXX.......XXX........XXXX", "XXXXXXXXXX..XXX.......XXXXXX.......XXX..XXXXXXXXXX", "XXXXXXXXXXXXXXX.......XXXXXX.......XXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ],
-        END: [
-            "..................................................", "..................................................", "..................................................", "..................................................",
-            "..................................................", "..................................................", "..................................................", "..................................................",
-            "..................................................", "..................................................", ".................................................F", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        ]
-    };
-
-    // 문자열 길이를 정확히 50칸으로 보정 (픽셀 엇나감 방지)
-    const chunks = {};
-    for (let key in rawChunks) {
-        chunks[key] = rawChunks[key].map(row => (row + "..................................................").slice(0, 50));
-    }
-
-    // 모듈을 이어붙여 초대형 맵 생성 함수
-    function buildMap(chunkList) {
-        let map = ["", "", "", "", "", "", "", "", "", "", "", ""];
-        chunkList.forEach(name => {
-            for (let i = 0; i < 12; i++) map[i] += chunks[name][i];
-        });
-        return map;
-    }
-
-    // 🚀 압도적인 길이(750칸)와 다양한 공중/지상 패턴의 5가지 스테이지
-    const stages = [
-        { name: "Stage 1: 끝없는 워밍업", music: tunes[0], map: buildMap([
-            'C_FLAT', 'C_START', 'C_JUMPS', 'C_PLAT', 'C_STAIRS', 'U_TRANS', 'U_OBS1', 'U_OBS2', 'U_OBS1', 'C_TRANS', 'C_JUMPS', 'C_PLAT', 'C_HARD', 'C_FLAT', 'END'
-        ]) },
-        { name: "Stage 2: 어지러운 동굴 비행", music: tunes[1], map: buildMap([
-            'C_FLAT', 'S_TRANS', 'S_TUN1', 'S_TUN2', 'S_TUN1', 'S_TUN2', 'S_HARD', 'S_TUN1', 'S_TUN2', 'S_HARD', 'C_TRANS', 'C_STAIRS', 'C_JUMPS', 'C_FLAT', 'END'
-        ]) },
-        { name: "Stage 3: 3단 변신 롤러코스터", music: tunes[2], map: buildMap([
-            'C_FLAT', 'C_HARD', 'C_PLAT', 'U_TRANS', 'U_OBS2', 'U_FLAPPY1', 'U_FLAPPY2', 'S_TRANS', 'S_TUN2', 'S_HARD', 'S_TUN1', 'C_TRANS', 'C_HARD', 'C_FLAT', 'END'
-        ]) },
-        { name: "Stage 4: 플래피 버드 지옥", music: tunes[3], map: buildMap([
-            'C_FLAT', 'U_TRANS', 'U_FLAPPY1', 'U_FLAPPY2', 'U_FLAPPY1', 'U_FLAPPY2', 'U_OBS1', 'U_FLAPPY2', 'U_FLAPPY1', 'U_OBS2', 'C_TRANS', 'C_JUMPS', 'C_FLAT', 'C_FLAT', 'END'
-        ]) },
-        { name: "Stage 5: 마라톤 한계돌파", music: tunes[4], map: buildMap([
-            'C_FLAT', 'C_HARD', 'C_STAIRS', 'U_TRANS', 'U_OBS1', 'U_OBS2', 'S_TRANS', 'S_HARD', 'S_TUN2', 'C_TRANS', 'C_HARD', 'U_TRANS', 'U_FLAPPY2', 'C_TRANS', 'END'
-        ]) }
-    ];
-
-    stages.forEach((stage, idx) => {
-        let opt = document.createElement('option');
-        opt.value = idx; opt.innerText = stage.name;
-        stageSelect.appendChild(opt);
-    });
-
-    const BLOCK_SIZE = 40; let gameSpeed = 7.5;
-    let isPlaying = false, isHolding = false;
-    let animationId, cameraX = 0, frame = 0, currentStageIndex = 0;
-
-    const player = { x: 150, y: 0, size: 30, dy: 0, mode: 'cube', rotation: 0, grounded: false, dead: false, jumpQueued: false };
-    const peerPlayer = { active: false, camX: 0, y: 0, rot: 0, mode: 'cube', dead: false };
-    let peer = null, conn = null, isHost = false, isMultiplayer = false;
-
-    let blocks = [], spikes = [], portals = [], finishLine = null, maxLevelWidth = 0;
-
-    function loadLevel(index) {
-        currentStageIndex = index;
-        let levelMap = stages[index].map;
-        blocks = []; spikes = []; portals = []; finishLine = null;
-        maxLevelWidth = levelMap[0].length * BLOCK_SIZE;
-        bgm.src = stages[index].music; bgm.load();
-
-        for (let r = 0; r < levelMap.length; r++) {
-            for (let c = 0; c < levelMap[r].length; c++) {
-                let char = levelMap[r][c];
-                let x = c * BLOCK_SIZE, y = r * BLOCK_SIZE;
-                if (char === 'X') blocks.push({ x, y, size: BLOCK_SIZE });
-                else if (char === '^') spikes.push({ x, y, size: BLOCK_SIZE });
-                else if (char === 'S' || char === 'C' || char === 'U') portals.push({ x, y, type: char });
-                else if (char === 'F') finishLine = { x, y };
-            }
-        }
-    }
-
-    function initPeer() {
-        peer = new Peer();
-        peer.on('open', id => {
-            document.getElementById('my-id').innerText = id;
-            document.getElementById('host-btn').disabled = false; 
-            document.getElementById('join-btn').disabled = false;
-        });
-        peer.on('connection', c => {
-            conn = c; setupConnection(); isHost = true;
-            document.getElementById('status-msg').innerText = "친구가 접속했습니다! 시작을 눌러주세요.";
-        });
-    }
-
-    document.getElementById('host-btn').addEventListener('click', e => { 
-        e.target.disabled = true; document.getElementById('join-btn').disabled = true; 
-        document.getElementById('status-msg').innerText = "방 코드를 친구에게 알려주세요.";
-    });
-    document.getElementById('join-btn').addEventListener('click', () => {
-        let t = document.getElementById('target-id').value.trim();
-        if(t) { 
-            document.getElementById('status-msg').innerText = "접속 중...";
-            conn = peer.connect(t); 
-            conn.on('open', () => { 
-                setupConnection(); isHost = false; 
-                document.getElementById('status-msg').innerText = "방장이 게임을 시작할 때까지 대기하세요.";
-            }); 
-        }
-    });
-
-    function setupConnection() {
-        isMultiplayer = true; peerPlayer.active = true;
-        conn.on('data', d => {
-            if(d.type === 'start') { stageSelect.value = d.stage; startGame(d.stage); }
-            else if(d.type === 'sync') {
-                peerPlayer.camX = d.camX; peerPlayer.y = d.y;
-                peerPlayer.rot = d.rot; peerPlayer.mode = d.mode; peerPlayer.dead = d.dead;
-            }
-        });
-    }
-
-    document.getElementById('solo-btn').addEventListener('click', () => {
-        isMultiplayer = false; peerPlayer.active = false; 
-        startGame(parseInt(stageSelect.value));
-    });
-
-    document.getElementById('restart-btn').addEventListener('click', () => {
-        if (!uiGameOver.classList.contains('hidden')) startGame(currentStageIndex);
-    });
-
-    function handleInput(e, state) {
-        if (e.target && (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
-        if (player.dead && !uiGameOver.classList.contains('hidden')) {
-            if (state && (e.code === 'Space' || e.type === 'mousedown' || e.type === 'touchstart')) {
-                startGame(currentStageIndex); return;
-            }
-        }
-        if (e.type.includes('key')) {
-            if (e.code === 'Space' || e.code === 'ArrowUp' || e.key === ' ' || e.key === 'ArrowUp') {
-                if (state && e.type === 'keydown') e.preventDefault();
-                if (state && !isHolding) player.jumpQueued = true; 
-                isHolding = state;
-            }
-        } else {
-            if (state && e.cancelable) e.preventDefault();
-            if (state && !isHolding) player.jumpQueued = true; 
-            isHolding = state;
-        }
-    }
-    
-    window.addEventListener('keydown', e => handleInput(e, true), { passive: false });
-    window.addEventListener('keyup', e => handleInput(e, false));
-    window.addEventListener('mousedown', e => handleInput(e, true), { passive: false });
-    window.addEventListener('mouseup', e => handleInput(e, false));
-    window.addEventListener('touchstart', e => handleInput(e, true), { passive: false });
-    window.addEventListener('touchend', e => handleInput(e, false));
-
-    function checkAABB(r1, r2, pad = 0) {
-        return (r1.x + pad < r2.x + r2.w - pad && r1.x + r1.w - pad > r2.x + pad &&
-                r1.y + pad < r2.y + r2.h - pad && r1.y + r1.h - pad > r2.y + pad);
-    }
-
-    function updatePhysics() {
-        if (player.dead) return;
-
-        if (player.mode === 'cube') {
-            player.dy += 1.3;
-            if (player.jumpQueued && player.grounded) { 
-                player.dy = -16.5; player.grounded = false; playJumpSound(); 
-            }
-            player.dy = Math.max(-18, Math.min(player.dy, 18));
-            if (!player.grounded) player.rotation += 6.5;
-            else player.rotation = Math.round(player.rotation / 90) * 90;
-
-        } else if (player.mode === 'ship') {
-            if (isHolding) player.dy -= 0.8; 
-            else player.dy += 0.7;
-            player.dy = Math.max(-8, Math.min(player.dy, 8));
-            player.rotation = player.dy * 3;
-
-        } else if (player.mode === 'ufo') {
-            player.dy += 1.2;
-            if (player.jumpQueued) {
-                player.dy = -10.5; playJumpSound();
-            }
-            player.dy = Math.max(-14, Math.min(player.dy, 14));
-            player.rotation += (player.dy * 0.5);
+        // 새 노트 생성
+        function createNewNote() {
+            const newNote = {
+                id: Date.now().toString(),
+                title: '',
+                content: '',
+                updatedAt: new Date().toISOString()
+            };
+            notes.unshift(newNote); // 맨 앞에 추가
+            saveNotes();
+            selectNote(newNote.id);
         }
 
-        player.jumpQueued = false; 
-
-        player.y += player.dy;
-        player.grounded = false;
-        
-        let hitWall = false;
-        let shipHitBlock = false;
-        const pRect = { x: player.x, y: player.y, w: player.size, h: player.size };
-
-        for (let b of blocks) {
-            let bRect = { x: b.x - cameraX, y: b.y, w: b.size, h: b.size };
-            if (checkAABB(pRect, bRect)) {
-                if (player.mode === 'ship') {
-                    shipHitBlock = true; break;
-                }
-                
-                let overLeft = (pRect.x + pRect.w) - bRect.x;
-                let overRight = (bRect.x + bRect.w) - pRect.x;
-                let overTop = (pRect.y + pRect.h) - bRect.y;
-                let overBot = (bRect.y + bRect.h) - pRect.y;
-
-                if (overTop <= 20 && player.dy >= 0) { 
-                    player.y = bRect.y - player.size; player.dy = 0; player.grounded = true; 
-                } 
-                else if (overBot <= 20 && player.dy < 0) { 
-                    player.y = bRect.y + bRect.h; player.dy = 0; 
-                } 
-                else { 
-                    if (overLeft > 4 && overRight > 4) hitWall = true; 
-                }
-                pRect.y = player.y; 
-            }
-        }
-
-        if (player.mode === 'ship') {
-            if (player.y < 0 || player.y + player.size > canvas.height || shipHitBlock) die();
-        } else {
-            if (hitWall || player.y < -50 || player.y > canvas.height + 50) die();
-        }
-
-        for (let s of spikes) {
-            let sRect = { x: s.x - cameraX + 8, y: s.y + 16, w: s.size - 16, h: s.size - 16 };
-            if (checkAABB(pRect, sRect, 0)) die();
-        }
-
-        for (let i = 0; i < portals.length; i++) {
-            let pt = portals[i];
-            let ptRect = { x: pt.x - cameraX, y: pt.y, w: BLOCK_SIZE, h: BLOCK_SIZE * 2 };
-            if (checkAABB(pRect, ptRect)) {
-                if (pt.type === 'S') player.mode = 'ship';
-                else if (pt.type === 'C') player.mode = 'cube';
-                else if (pt.type === 'U') player.mode = 'ufo';
-                portals.splice(i, 1);
-            }
-        }
-
-        if (finishLine && finishLine.x - cameraX < player.x) winGame();
-    }
-
-    function die() {
-        player.dead = true;
-        if (!isMultiplayer) setTimeout(() => gameOver("CRASHED!"), 100);
-    }
-
-    function drawPlayerShape(p, color, isGhost = false) {
-        if (p.dead) return;
-        ctx.save();
-        ctx.translate(p.x + p.size / 2, p.y + p.size / 2);
-        ctx.rotate((p.rot || p.rotation) * Math.PI / 180);
-        ctx.globalAlpha = isGhost ? 0.3 : 1;
-        ctx.fillStyle = color;
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
-
-        if (p.mode === 'cube') {
-            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-            ctx.strokeRect(-p.size / 2, -p.size / 2, p.size, p.size);
-        } else if (p.mode === 'ship') {
-            ctx.beginPath();
-            ctx.moveTo(p.size/2 + 10, 0); ctx.lineTo(-p.size/2, -p.size/2.5); ctx.lineTo(-p.size/2, p.size/2.5);
-            ctx.closePath(); ctx.fill(); ctx.stroke();
-            if(isHolding && !isGhost) {
-                ctx.fillStyle = '#ff9900'; ctx.fillRect(-p.size/2 - 15, -5, 15, 10);
-            }
-        } else if (p.mode === 'ufo') {
-            ctx.beginPath();
-            ctx.arc(0, 0, p.size/2.5, Math.PI, 0);
-            ctx.fillStyle = 'rgba(200, 255, 255, 0.8)'; ctx.fill(); ctx.stroke();
-            ctx.beginPath();
-            ctx.ellipse(0, p.size/6, p.size/1.2, p.size/3.5, 0, 0, Math.PI*2);
-            ctx.fillStyle = color; ctx.fill(); ctx.stroke();
-            if(!isGhost && player.dy < 0) {
-                ctx.fillStyle = '#00ffff';
-                ctx.beginPath(); ctx.arc(0, p.size/2, 5, 0, Math.PI*2); ctx.fill();
-            }
-        }
-        ctx.restore();
-    }
-
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-        for (let i = 0; i < canvas.width; i += 40) {
-            ctx.beginPath(); ctx.moveTo(i - (cameraX * 0.5 % 40), 0); ctx.lineTo(i - (cameraX * 0.5 % 40), canvas.height); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
-        }
-
-        ctx.fillStyle = '#114'; ctx.strokeStyle = '#00ffcc'; ctx.lineWidth = 2;
-        for (let b of blocks) {
-            if (b.x - cameraX > canvas.width || b.x - cameraX < -BLOCK_SIZE) continue;
-            ctx.fillRect(b.x - cameraX, b.y, b.size, b.size);
-            ctx.strokeRect(b.x - cameraX, b.y, b.size, b.size);
-        }
-
-        ctx.fillStyle = '#ff0055'; ctx.strokeStyle = '#fff';
-        for (let s of spikes) {
-            if (s.x - cameraX > canvas.width || s.x - cameraX < -BLOCK_SIZE) continue;
-            ctx.beginPath();
-            ctx.moveTo(s.x - cameraX + s.size / 2, s.y); ctx.lineTo(s.x - cameraX + s.size, s.y + s.size); ctx.lineTo(s.x - cameraX, s.y + s.size);
-            ctx.closePath(); ctx.fill(); ctx.stroke();
-        }
-
-        for (let pt of portals) {
-            if (pt.x - cameraX > canvas.width || pt.x - cameraX < -BLOCK_SIZE) continue;
-            ctx.lineWidth = 4;
-            if (pt.type === 'S') ctx.strokeStyle = '#ff00ff';
-            else if (pt.type === 'C') ctx.strokeStyle = '#00ff00';
-            else if (pt.type === 'U') ctx.strokeStyle = '#ffaa00';
+        // 노트 선택
+        function selectNote(id) {
+            currentNoteId = id;
+            const note = notes.find(n => n.id === id);
             
-            ctx.beginPath();
-            ctx.ellipse(pt.x - cameraX + BLOCK_SIZE/2, pt.y + BLOCK_SIZE, 15, BLOCK_SIZE, 0, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.fillStyle = ctx.strokeStyle; ctx.font = '14px "Press Start 2P"';
-            ctx.fillText(pt.type, pt.x - cameraX + 13, pt.y + BLOCK_SIZE + 5);
+            if (note) {
+                // UI 전환
+                emptyStateEl.style.display = 'none';
+                editorContainerEl.style.display = 'flex';
+                
+                // 데이터 채우기
+                titleInput.value = note.title;
+                contentInput.value = note.content;
+                
+                renderNoteList(); // 활성화된 스타일 적용을 위해 재렌더링
+            }
         }
 
-        if (finishLine) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-            ctx.fillRect(finishLine.x - cameraX, 0, 10, canvas.height);
+        // 자동 저장 (입력할 때마다 호출)
+        function autoSave() {
+            if (!currentNoteId) return;
+
+            const noteIndex = notes.findIndex(n => n.id === currentNoteId);
+            if (noteIndex !== -1) {
+                notes[noteIndex].title = titleInput.value;
+                notes[noteIndex].content = contentInput.value;
+                notes[noteIndex].updatedAt = new Date().toISOString();
+                
+                saveNotes();
+                renderNoteList();
+            }
         }
 
-        if (isMultiplayer && peerPlayer.active) {
-            let ghostX = 150 + (peerPlayer.camX - cameraX);
-            drawPlayerShape({ x: ghostX, y: peerPlayer.y, size: 30, rot: peerPlayer.rot, mode: peerPlayer.mode, dead: peerPlayer.dead }, '#ffeb3b', true);
+        // 현재 노트 삭제
+        function deleteCurrentNote() {
+            if (!currentNoteId) return;
+            if (confirm('정말로 이 노트를 삭제하시겠습니까?')) {
+                notes = notes.filter(n => n.id !== currentNoteId);
+                saveNotes();
+                currentNoteId = null;
+                
+                // UI 초기화
+                emptyStateEl.style.display = 'flex';
+                editorContainerEl.style.display = 'none';
+                titleInput.value = '';
+                contentInput.value = '';
+                
+                renderNoteList();
+            }
         }
 
-        drawPlayerShape(player, '#ffeb3b', false);
-
-        let progress = Math.min(100, Math.max(0, Math.floor(((player.x + cameraX) / maxLevelWidth) * 100)));
-        ctx.fillStyle = '#fff'; ctx.font = '12px "Press Start 2P"';
-        ctx.fillText(`${stages[currentStageIndex].name} - ${progress}%`, 20, 30);
-    }
-
-    function animate() {
-        if (!isPlaying) return;
-        
-        if (!player.dead) cameraX += gameSpeed;
-        updatePhysics();
-        draw();
-
-        if (isMultiplayer && conn && frame % 2 === 0) {
-            conn.send({ type: 'sync', camX: cameraX, y: player.y, rot: player.rotation, mode: player.mode, dead: player.dead });
+        // 로컬 스토리지에 저장
+        function saveNotes() {
+            localStorage.setItem('my_notes', JSON.stringify(notes));
         }
 
-        if (isMultiplayer && player.dead && peerPlayer.dead) gameOver("BOTH CRASHED!");
+        // 왼쪽 사이드바 리스트 렌더링
+        function renderNoteList() {
+            noteListEl.innerHTML = '';
+            
+            notes.forEach(note => {
+                const li = document.createElement('li');
+                li.className = `note-item ${note.id === currentNoteId ? 'active' : ''}`;
+                li.onclick = () => selectNote(note.id);
 
-        frame++;
-        animationId = requestAnimationFrame(animate);
-    }
+                const displayTitle = note.title.trim() === '' ? '새 노트' : note.title;
+                const displayContent = note.content.trim() === '' ? '내용이 없습니다.' : note.content;
 
-    function startGame(stageIndex) {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        if (isHost && conn) conn.send({ type: 'start', stage: stageIndex });
-        
-        loadLevel(stageIndex);
-        player.x = 150; player.y = 410; player.dy = 0; player.rotation = 0;
-        player.mode = 'cube'; player.dead = false; player.grounded = true; player.jumpQueued = false;
-        cameraX = 0; frame = 0; isHolding = false;
-        
-        uiLobby.classList.add('hidden'); uiGameOver.classList.add('hidden');
-        isPlaying = true; animate();
-        
-        bgm.currentTime = 0;
-        bgm.play().catch(e => console.log("BGM 재생 막힘:", e));
-    }
-
-    function gameOver(msg) {
-        isPlaying = false; cancelAnimationFrame(animationId);
-        bgm.pause();
-        document.getElementById('result-title').innerText = msg;
-        document.getElementById('result-title').style.color = "#ff0055";
-        let p = Math.min(100, Math.floor(((player.x + cameraX) / maxLevelWidth) * 100));
-        document.getElementById('progress-text').innerText = `Progress: ${p}%`;
-        
-        if(isMultiplayer) document.getElementById('restart-btn').style.display = 'none';
-        else document.getElementById('restart-btn').style.display = 'block';
-
-        uiGameOver.classList.remove('hidden');
-    }
-
-    function winGame() {
-        gameOver("LEVEL CLEARED!");
-        document.getElementById('result-title').style.color = "#00ffcc";
-        document.getElementById('restart-btn').innerText = "다시 하기 (Space)";
-    }
-
-    document.getElementById('lobby-btn').addEventListener('click', () => {
-        uiGameOver.classList.add('hidden'); uiLobby.classList.remove('hidden');
-    });
-
-    initPeer();
-</script>
+                li.innerHTML = `
+                    <h4 class="note-item-title">${displayTitle}</h4>
+                    <p class="note-item-preview">${displayContent}</p>
+                `;
+                
+                noteListEl.appendChild(li);
+            });
+        }
+    </script>
 </body>
 </html>
