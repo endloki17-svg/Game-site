@@ -1,3716 +1,963 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport"
-      content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-
-<title>VOX MEETING</title>
-
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-
-<style>
-*{
-    box-sizing:border-box;
-    margin:0;
-    padding:0;
-}
-
-:root{
-    --bg:#070910;
-    --panel:#0d111c;
-    --panel2:#111725;
-    --panel3:#171e2d;
-    --line:rgba(255,255,255,.08);
-    --text:#f5f7ff;
-    --muted:#8c96aa;
-    --blue:#5b8cff;
-    --cyan:#4de3ff;
-    --green:#49e59b;
-    --red:#ff5d73;
-    --yellow:#ffd45a;
-    --purple:#9c6cff;
-    --shadow:0 25px 80px rgba(0,0,0,.45);
-}
-
-html,body{
-    width:100%;
-    height:100%;
-    overflow:hidden;
-    background:var(--bg);
-    color:var(--text);
-    font-family:
-        Inter,
-        Pretendard,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
-}
-
-button{
-    font-family:inherit;
-    border:0;
-    outline:0;
-    cursor:pointer;
-}
-
-button:disabled{
-    cursor:not-allowed;
-    opacity:.45;
-}
-
-#app{
-    position:relative;
-    width:100%;
-    height:100%;
-    overflow:hidden;
-    background:
-        radial-gradient(circle at 10% 10%,rgba(91,140,255,.12),transparent 30%),
-        radial-gradient(circle at 90% 90%,rgba(156,108,255,.10),transparent 30%),
-        #070910;
-}
-
-/* =========================
-   BACKGROUND
-========================= */
-
-.background-grid{
-    pointer-events:none;
-    position:absolute;
-    inset:0;
-    opacity:.22;
-    background-image:
-        linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
-        linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
-    background-size:50px 50px;
-    mask-image:linear-gradient(to bottom,black,transparent);
-}
-
-.orb{
-    position:absolute;
-    width:450px;
-    height:450px;
-    border-radius:50%;
-    filter:blur(100px);
-    opacity:.14;
-    pointer-events:none;
-    animation:orbFloat 12s ease-in-out infinite alternate;
-}
-
-.orb.one{
-    background:#376cff;
-    left:-180px;
-    top:-200px;
-}
-
-.orb.two{
-    background:#a23fff;
-    right:-200px;
-    bottom:-180px;
-    animation-delay:-5s;
-}
-
-@keyframes orbFloat{
-    from{transform:translate(0,0) scale(1)}
-    to{transform:translate(80px,50px) scale(1.15)}
-}
-
-/* =========================
-   TOP BAR
-========================= */
-
-.topbar{
-    height:72px;
-    position:relative;
-    z-index:20;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:0 22px;
-    border-bottom:1px solid var(--line);
-    background:rgba(7,9,16,.78);
-    backdrop-filter:blur(25px);
-}
-
-.brand{
-    display:flex;
-    align-items:center;
-    gap:12px;
-}
-
-.brand-icon{
-    width:38px;
-    height:38px;
-    border-radius:12px;
-    display:grid;
-    place-items:center;
-    background:
-        linear-gradient(135deg,#5b8cff,#8b62ff);
-    box-shadow:
-        0 0 30px rgba(91,140,255,.35);
-    font-size:18px;
-}
-
-.brand-title{
-    font-size:16px;
-    font-weight:800;
-    letter-spacing:.08em;
-}
-
-.brand-sub{
-    font-size:10px;
-    color:var(--muted);
-    margin-top:2px;
-    letter-spacing:.08em;
-}
-
-.top-actions{
-    display:flex;
-    align-items:center;
-    gap:10px;
-}
-
-.status-pill{
-    height:36px;
-    padding:0 13px;
-    display:flex;
-    align-items:center;
-    gap:8px;
-    border:1px solid var(--line);
-    border-radius:12px;
-    background:rgba(255,255,255,.035);
-    color:#b8c0d1;
-    font-size:12px;
-}
-
-.status-dot{
-    width:7px;
-    height:7px;
-    border-radius:50%;
-    background:#6e7788;
-}
-
-.status-pill.live{
-    border-color:rgba(73,229,155,.25);
-    color:#7ef0ba;
-}
-
-.status-pill.live .status-dot{
-    background:var(--green);
-    box-shadow:0 0 12px var(--green);
-}
-
-/* =========================
-   LAYOUT
-========================= */
-
-.workspace{
-    position:relative;
-    z-index:5;
-    display:grid;
-    grid-template-columns:minmax(0,1fr) 390px;
-    height:calc(100% - 72px);
-}
-
-.main{
-    min-width:0;
-    position:relative;
-    display:flex;
-    flex-direction:column;
-}
-
-.sidebar{
-    min-width:0;
-    border-left:1px solid var(--line);
-    background:rgba(9,12,20,.76);
-    backdrop-filter:blur(25px);
-    display:flex;
-    flex-direction:column;
-}
-
-/* =========================
-   WELCOME
-========================= */
-
-.welcome{
-    position:absolute;
-    inset:0;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    z-index:10;
-    padding:30px;
-    transition:.5s ease;
-}
-
-.welcome.hidden{
-    opacity:0;
-    pointer-events:none;
-    transform:scale(.97);
-}
-
-.welcome-card{
-    width:min(700px,100%);
-    padding:48px;
-    border:1px solid var(--line);
-    border-radius:30px;
-    background:
-        linear-gradient(145deg,
-            rgba(18,24,38,.92),
-            rgba(10,13,22,.94));
-    box-shadow:var(--shadow);
-    text-align:center;
-    position:relative;
-    overflow:hidden;
-}
-
-.welcome-card:before{
-    content:"";
-    position:absolute;
-    width:300px;
-    height:300px;
-    border-radius:50%;
-    background:#557cff;
-    filter:blur(100px);
-    opacity:.08;
-    top:-150px;
-    left:50%;
-    transform:translateX(-50%);
-}
-
-.hero-icon{
-    width:90px;
-    height:90px;
-    margin:0 auto 25px;
-    border-radius:28px;
-    display:grid;
-    place-items:center;
-    font-size:35px;
-    background:
-        linear-gradient(135deg,
-        rgba(91,140,255,.25),
-        rgba(156,108,255,.2));
-    border:1px solid rgba(255,255,255,.1);
-    box-shadow:
-        0 0 60px rgba(91,140,255,.15);
-    animation:heroPulse 3s ease-in-out infinite;
-}
-
-@keyframes heroPulse{
-    0%,100%{transform:translateY(0)}
-    50%{transform:translateY(-7px)}
-}
-
-.welcome h1{
-    font-size:42px;
-    letter-spacing:-.04em;
-    margin-bottom:13px;
-}
-
-.welcome p{
-    color:var(--muted);
-    line-height:1.7;
-    font-size:14px;
-    max-width:500px;
-    margin:0 auto 30px;
-}
-
-.setup{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:12px;
-    text-align:left;
-}
-
-.field{
-    position:relative;
-}
-
-.field.full{
-    grid-column:1/-1;
-}
-
-.field label{
-    display:block;
-    color:#8993a8;
-    font-size:11px;
-    margin:0 0 7px 3px;
-}
-
-.field input{
-    width:100%;
-    height:50px;
-    padding:0 15px;
-    border-radius:13px;
-    border:1px solid var(--line);
-    background:#090d16;
-    color:white;
-    outline:none;
-    transition:.2s;
-}
-
-.field input:focus{
-    border-color:rgba(91,140,255,.65);
-    box-shadow:0 0 0 3px rgba(91,140,255,.08);
-}
-
-.primary{
-    width:100%;
-    height:52px;
-    margin-top:16px;
-    border-radius:14px;
-    color:white;
-    font-weight:800;
-    background:
-        linear-gradient(135deg,#527fff,#7e5bff);
-    box-shadow:
-        0 12px 35px rgba(91,140,255,.22);
-    transition:.2s;
-}
-
-.primary:hover{
-    transform:translateY(-2px);
-    box-shadow:
-        0 16px 45px rgba(91,140,255,.32);
-}
-
-.primary:active{
-    transform:scale(.98);
-}
-
-.join-row{
-    display:flex;
-    gap:10px;
-}
-
-.join-row input{
-    flex:1;
-}
-
-.join-button{
-    width:120px;
-    border-radius:13px;
-    color:white;
-    font-weight:700;
-    background:#171e2d;
-    border:1px solid var(--line);
-}
-
-/* =========================
-   MEETING HEADER
-========================= */
-
-.meeting-header{
-    height:72px;
-    flex-shrink:0;
-    padding:0 20px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    border-bottom:1px solid var(--line);
-}
-
-.meeting-title{
-    display:flex;
-    align-items:center;
-    gap:12px;
-}
-
-.live-badge{
-    padding:5px 9px;
-    border-radius:7px;
-    font-size:9px;
-    font-weight:900;
-    letter-spacing:.1em;
-    background:rgba(255,93,115,.12);
-    color:#ff7587;
-    border:1px solid rgba(255,93,115,.2);
-}
-
-.meeting-name{
-    font-size:16px;
-    font-weight:800;
-}
-
-.meeting-code{
-    font-family:monospace;
-    color:#788297;
-    font-size:11px;
-    margin-left:8px;
-}
-
-.meeting-tools{
-    display:flex;
-    align-items:center;
-    gap:8px;
-}
-
-.icon-button{
-    width:38px;
-    height:38px;
-    border-radius:11px;
-    background:rgba(255,255,255,.04);
-    border:1px solid var(--line);
-    color:#bfc7d7;
-    transition:.2s;
-}
-
-.icon-button:hover{
-    background:rgba(255,255,255,.08);
-    color:white;
-}
-
-/* =========================
-   PARTICIPANTS
-========================= */
-
-.stage{
-    flex:1;
-    min-height:0;
-    padding:20px;
-    overflow:auto;
-}
-
-.participants{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-    gap:14px;
-    align-content:start;
-}
-
-.participant{
-    min-height:190px;
-    position:relative;
-    overflow:hidden;
-    border:1px solid var(--line);
-    border-radius:20px;
-    background:
-        linear-gradient(145deg,
-        rgba(19,25,39,.88),
-        rgba(11,15,24,.9));
-    box-shadow:0 15px 40px rgba(0,0,0,.15);
-    transition:.3s;
-}
-
-.participant:hover{
-    transform:translateY(-2px);
-    border-color:rgba(255,255,255,.13);
-}
-
-.participant.me{
-    border-color:rgba(91,140,255,.25);
-}
-
-.avatar-area{
-    height:140px;
-    display:grid;
-    place-items:center;
-    position:relative;
-}
-
-.avatar{
-    width:72px;
-    height:72px;
-    border-radius:24px;
-    display:grid;
-    place-items:center;
-    font-size:25px;
-    font-weight:800;
-    background:
-        linear-gradient(135deg,
-        rgba(91,140,255,.25),
-        rgba(156,108,255,.25));
-    border:1px solid rgba(255,255,255,.1);
-}
-
-.speaking-ring{
-    position:absolute;
-    width:90px;
-    height:90px;
-    border:2px solid rgba(73,229,155,.8);
-    border-radius:29px;
-    opacity:0;
-    transform:scale(.85);
-}
-
-.participant.speaking .speaking-ring{
-    opacity:1;
-    animation:speakRing 1.2s ease-out infinite;
-}
-
-@keyframes speakRing{
-    0%{
-        transform:scale(.85);
-        opacity:.8;
-    }
-    100%{
-        transform:scale(1.3);
-        opacity:0;
-    }
-}
-
-.participant-info{
-    height:50px;
-    padding:0 14px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    border-top:1px solid var(--line);
-}
-
-.person-name{
-    font-size:12px;
-    font-weight:700;
-}
-
-.person-status{
-    display:flex;
-    align-items:center;
-    gap:5px;
-    color:#697489;
-    font-size:10px;
-}
-
-.person-status.active{
-    color:#68e9ad;
-}
-
-.mic-dot{
-    width:6px;
-    height:6px;
-    border-radius:50%;
-    background:#596274;
-}
-
-.person-status.active .mic-dot{
-    background:var(--green);
-    box-shadow:0 0 8px var(--green);
-}
-
-/* =========================
-   BOTTOM CONTROLS
-========================= */
-
-.controls{
-    height:88px;
-    flex-shrink:0;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    gap:12px;
-    border-top:1px solid var(--line);
-    background:rgba(7,10,17,.78);
-    backdrop-filter:blur(20px);
-}
-
-.control{
-    min-width:54px;
-    height:54px;
-    padding:0 17px;
-    border-radius:16px;
-    color:#c4cada;
-    background:#131a29;
-    border:1px solid var(--line);
-    transition:.2s;
-}
-
-.control:hover{
-    background:#1a2335;
-    color:white;
-    transform:translateY(-2px);
-}
-
-.control.active{
-    color:#7eeeb9;
-    border-color:rgba(73,229,155,.25);
-    background:rgba(73,229,155,.08);
-}
-
-.control.end{
-    color:white;
-    background:#e94f67;
-    border-color:transparent;
-    box-shadow:0 8px 30px rgba(233,79,103,.2);
-}
-
-.control .label{
-    margin-left:6px;
-    font-size:11px;
-    font-weight:700;
-}
-
-/* =========================
-   SIDEBAR
-========================= */
-
-.sidebar-header{
-    height:65px;
-    flex-shrink:0;
-    display:flex;
-    align-items:center;
-    padding:0 18px;
-    border-bottom:1px solid var(--line);
-}
-
-.tabs{
-    display:flex;
-    gap:5px;
-}
-
-.tab{
-    padding:8px 11px;
-    border-radius:9px;
-    color:#707b91;
-    background:transparent;
-    font-size:11px;
-    font-weight:700;
-}
-
-.tab.active{
-    background:#171e2d;
-    color:white;
-}
-
-.panel{
-    display:none;
-    min-height:0;
-    flex:1;
-}
-
-.panel.active{
-    display:flex;
-    flex-direction:column;
-}
-
-/* =========================
-   CHAT
-========================= */
-
-.chat-info{
-    padding:13px 17px;
-    font-size:10px;
-    color:#707b91;
-    border-bottom:1px solid var(--line);
-    line-height:1.5;
-}
-
-.messages{
-    flex:1;
-    overflow-y:auto;
-    padding:17px;
-}
-
-.messages::-webkit-scrollbar,
-.stage::-webkit-scrollbar{
-    width:5px;
-}
-
-.messages::-webkit-scrollbar-thumb,
-.stage::-webkit-scrollbar-thumb{
-    background:#252d3e;
-    border-radius:10px;
-}
-
-.message{
-    margin-bottom:17px;
-    animation:messageIn .3s ease;
-}
-
-@keyframes messageIn{
-    from{
-        opacity:0;
-        transform:translateY(8px);
-    }
-    to{
-        opacity:1;
-        transform:none;
-    }
-}
-
-.message-head{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    margin-bottom:6px;
-}
-
-.message-avatar{
-    width:26px;
-    height:26px;
-    border-radius:9px;
-    display:grid;
-    place-items:center;
-    background:#202a40;
-    font-size:9px;
-    font-weight:800;
-}
-
-.message-name{
-    font-size:11px;
-    font-weight:800;
-}
-
-.message-time{
-    font-size:9px;
-    color:#626d81;
-}
-
-.message-bubble{
-    margin-left:34px;
-    padding:10px 12px;
-    border-radius:5px 13px 13px 13px;
-    background:#141b2a;
-    border:1px solid rgba(255,255,255,.05);
-    color:#dbe0ea;
-    font-size:12px;
-    line-height:1.6;
-    word-break:break-word;
-}
-
-.message.system .message-bubble{
-    color:#7f8aa0;
-    background:rgba(255,255,255,.025);
-    border-style:dashed;
-}
-
-.message.voice .message-bubble{
-    border-color:rgba(91,140,255,.13);
-    background:
-        linear-gradient(135deg,
-        rgba(91,140,255,.09),
-        rgba(156,108,255,.05));
-}
-
-.voice-label{
-    display:inline-flex;
-    align-items:center;
-    gap:5px;
-    color:#779eff;
-    font-size:9px;
-    font-weight:800;
-    margin-bottom:4px;
-}
-
-/* =========================
-   PEOPLE PANEL
-========================= */
-
-.people-list{
-    flex:1;
-    overflow:auto;
-    padding:15px;
-}
-
-.people-title{
-    color:#626d81;
-    font-size:10px;
-    font-weight:800;
-    margin:4px 5px 12px;
-    letter-spacing:.1em;
-}
-
-.person-row{
-    height:58px;
-    padding:0 11px;
-    margin-bottom:7px;
-    display:flex;
-    align-items:center;
-    gap:11px;
-    border-radius:13px;
-    border:1px solid transparent;
-    background:rgba(255,255,255,.025);
-}
-
-.person-row:hover{
-    border-color:var(--line);
-}
-
-.small-avatar{
-    width:34px;
-    height:34px;
-    border-radius:11px;
-    display:grid;
-    place-items:center;
-    background:#1c263b;
-    font-size:11px;
-    font-weight:800;
-}
-
-.row-info{
-    flex:1;
-    min-width:0;
-}
-
-.row-name{
-    font-size:11px;
-    font-weight:700;
-}
-
-.row-role{
-    color:#606b7e;
-    font-size:9px;
-    margin-top:3px;
-}
-
-.row-state{
-    width:7px;
-    height:7px;
-    border-radius:50%;
-    background:#555f70;
-}
-
-.row-state.online{
-    background:var(--green);
-    box-shadow:0 0 10px rgba(73,229,155,.5);
-}
-
-/* =========================
-   RECORD PANEL
-========================= */
-
-.record-toolbar{
-    padding:13px 15px;
-    display:flex;
-    gap:7px;
-    border-bottom:1px solid var(--line);
-}
-
-.record-button{
-    flex:1;
-    height:35px;
-    border-radius:9px;
-    color:#8994a8;
-    background:#141b29;
-    border:1px solid var(--line);
-    font-size:10px;
-    font-weight:700;
-}
-
-.record-button:hover{
-    color:white;
-}
-
-.record-list{
-    flex:1;
-    overflow:auto;
-    padding:15px;
-}
-
-.record-item{
-    padding:11px 12px;
-    margin-bottom:7px;
-    border-radius:11px;
-    background:rgba(255,255,255,.025);
-    border:1px solid rgba(255,255,255,.04);
-}
-
-.record-time{
-    color:#657084;
-    font-size:9px;
-    margin-bottom:5px;
-}
-
-.record-text{
-    color:#cfd5e2;
-    font-size:11px;
-    line-height:1.5;
-}
-
-/* =========================
-   TOAST
-========================= */
-
-.toast-container{
-    position:fixed;
-    right:20px;
-    bottom:20px;
-    z-index:100;
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-}
-
-.toast{
-    min-width:250px;
-    max-width:360px;
-    padding:13px 15px;
-    border-radius:13px;
-    background:#151c2b;
-    border:1px solid rgba(255,255,255,.1);
-    box-shadow:0 15px 50px rgba(0,0,0,.35);
-    animation:toastIn .35s ease;
-    font-size:11px;
-}
-
-@keyframes toastIn{
-    from{
-        opacity:0;
-        transform:translateY(15px) translateX(10px);
-    }
-    to{
-        opacity:1;
-        transform:none;
-    }
-}
-
-.toast strong{
-    display:block;
-    margin-bottom:3px;
-}
-
-.toast span{
-    color:#7d8799;
-}
-
-/* =========================
-   MIC VISUALIZER
-========================= */
-
-.voice-state{
-    position:absolute;
-    left:22px;
-    bottom:105px;
-    padding:8px 11px;
-    border-radius:10px;
-    display:flex;
-    align-items:center;
-    gap:8px;
-    background:rgba(9,13,21,.8);
-    border:1px solid var(--line);
-    backdrop-filter:blur(15px);
-    color:#707b8f;
-    font-size:10px;
-    opacity:0;
-    transform:translateY(5px);
-    transition:.3s;
-    pointer-events:none;
-}
-
-.voice-state.visible{
-    opacity:1;
-    transform:none;
-}
-
-.wave{
-    display:flex;
-    align-items:center;
-    gap:2px;
-    height:13px;
-}
-
-.wave i{
-    width:2px;
-    height:4px;
-    background:#5b8cff;
-    border-radius:2px;
-}
-
-.voice-state.listening .wave i{
-    animation:wave 1s ease-in-out infinite;
-}
-
-.wave i:nth-child(2){animation-delay:.1s}
-.wave i:nth-child(3){animation-delay:.2s}
-.wave i:nth-child(4){animation-delay:.3s}
-.wave i:nth-child(5){animation-delay:.4s}
-
-@keyframes wave{
-    0%,100%{height:4px}
-    50%{height:13px}
-}
-
-/* =========================
-   MODAL
-========================= */
-
-.modal{
-    position:fixed;
-    inset:0;
-    z-index:200;
-    display:grid;
-    place-items:center;
-    background:rgba(0,0,0,.65);
-    backdrop-filter:blur(12px);
-    opacity:0;
-    pointer-events:none;
-    transition:.3s;
-    padding:20px;
-}
-
-.modal.show{
-    opacity:1;
-    pointer-events:auto;
-}
-
-.modal-card{
-    width:min(430px,100%);
-    padding:28px;
-    border-radius:23px;
-    background:#111725;
-    border:1px solid var(--line);
-    box-shadow:var(--shadow);
-    transform:scale(.94);
-    transition:.3s;
-}
-
-.modal.show .modal-card{
-    transform:none;
-}
-
-.modal h2{
-    font-size:19px;
-    margin-bottom:8px;
-}
-
-.modal p{
-    color:#7f899c;
-    font-size:12px;
-    line-height:1.7;
-    margin-bottom:20px;
-}
-
-.modal-buttons{
-    display:flex;
-    gap:9px;
-}
-
-.modal-buttons button{
-    flex:1;
-    height:45px;
-    border-radius:11px;
-}
-
-.cancel{
-    color:#9ca5b7;
-    background:#181f2d;
-}
-
-.confirm{
-    color:white;
-    background:#557fff;
-}
-
-/* =========================
-   RESPONSIVE
-========================= */
-
-@media(max-width:900px){
-    .workspace{
-        grid-template-columns:1fr;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VoiceText Meet - 무음성 실시간 STT 회의실</title>
+  <!-- PeerJS SDK -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-dark: #0b0f19;
+      --panel-bg: rgba(22, 30, 49, 0.75);
+      --border-glow: rgba(99, 102, 241, 0.25);
+      --accent-primary: #6366f1;
+      --accent-cyan: #06b6d4;
+      --accent-pink: #ec4899;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --success: #10b981;
+      --danger: #ef4444;
     }
 
-    .sidebar{
-        position:absolute;
-        z-index:30;
-        right:0;
-        top:0;
-        bottom:0;
-        width:min(390px,92%);
-        transform:translateX(100%);
-        transition:.35s ease;
-        box-shadow:-20px 0 70px rgba(0,0,0,.45);
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+      user-select: none;
     }
 
-    .sidebar.open{
-        transform:none;
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      background-image: 
+        radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 85% 80%, rgba(6, 182, 212, 0.12) 0%, transparent 40%);
     }
 
-    .welcome-card{
-        padding:30px 20px;
+    /* Ambient Background Glow */
+    .glow-sphere {
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-pink));
+      filter: blur(140px);
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: 0;
+      animation: float 12s ease-in-out infinite alternate;
     }
 
-    .welcome h1{
-        font-size:31px;
+    @keyframes float {
+      0% { transform: translate(-50px, -50px) scale(1); }
+      100% { transform: translate(50px, 50px) scale(1.1); }
     }
 
-    .setup{
-        grid-template-columns:1fr;
+    /* Entry Modal */
+    #login-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(11, 15, 25, 0.85);
+      backdrop-filter: blur(20px);
+      z-index: 100;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: opacity 0.5s ease, visibility 0.5s ease;
     }
 
-    .field.full{
-        grid-column:auto;
+    .modal-card {
+      background: var(--panel-bg);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: 40px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px var(--border-glow);
+      text-align: center;
+      position: relative;
     }
 
-    .participants{
-        grid-template-columns:1fr;
+    .brand-logo {
+      font-size: 2.2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #a5b4fc, var(--accent-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
     }
 
-    .meeting-code{
-        display:none;
-    }
-}
-
-@media(max-width:520px){
-    .topbar{
-        padding:0 13px;
+    .input-group {
+      margin: 20px 0;
+      text-align: left;
     }
 
-    .brand-sub{
-        display:none;
+    .input-group label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: block;
     }
 
-    .status-pill{
-        display:none;
+    .input-field {
+      width: 100%;
+      padding: 14px 18px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      transition: all 0.3s ease;
     }
 
-    .meeting-header{
-        padding:0 13px;
+    .input-field:focus {
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+      background: rgba(255, 255, 255, 0.08);
     }
 
-    .stage{
-        padding:13px;
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
     }
 
-    .controls{
-        height:76px;
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-primary), #4f46e5);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
     }
 
-    .control{
-        min-width:46px;
-        width:46px;
-        padding:0;
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(99, 102, 241, 0.6);
     }
 
-    .control .label{
-        display:none;
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-top: 10px;
     }
 
-    .voice-state{
-        left:13px;
-        bottom:90px;
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
     }
-}
-</style>
+
+    /* Main App Layout */
+    .app-container {
+      width: 95vw;
+      height: 92vh;
+      max-width: 1400px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 28px;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      overflow: hidden;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+      z-index: 10;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      background: rgba(15, 23, 42, 0.6);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .room-info-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .room-id-badge {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 10px 14px;
+      border-radius: 10px;
+      margin-top: 8px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      color: var(--accent-cyan);
+    }
+
+    .copy-btn {
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: color 0.2s;
+    }
+
+    .copy-btn:hover { color: #fff; }
+
+    .participant-list {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+
+    .participant-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.02);
+      margin-bottom: 8px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-cyan));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    /* Main Chat Area */
+    .main-chat {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      position: relative;
+    }
+
+    .chat-header {
+      padding: 20px 30px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .meeting-status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--success);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .meeting-timer {
+      font-family: monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 30px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scroll-behavior: smooth;
+    }
+
+    /* Speech Bubble Styling */
+    .message-card {
+      max-width: 70%;
+      display: flex;
+      flex-direction: column;
+      animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .message-card.me {
+      align-self: flex-end;
+    }
+
+    .message-card.other {
+      align-self: flex-start;
+    }
+
+    .message-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .message-card.me .message-meta { justify-content: flex-end; }
+
+    .message-bubble {
+      padding: 14px 18px;
+      border-radius: 18px;
+      font-size: 0.98rem;
+      line-height: 1.5;
+      word-break: break-word;
+      position: relative;
+    }
+
+    .message-card.me .message-bubble {
+      background: linear-gradient(135deg, var(--accent-primary), #4338ca);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
+    }
+
+    .message-card.other .message-bubble {
+      background: rgba(255, 255, 255, 0.07);
+      color: #fff;
+      border-bottom-left-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Live Voice Preview Indicator */
+    .live-preview-container {
+      padding: 15px 30px;
+      background: rgba(15, 23, 42, 0.4);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .speech-wave {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      height: 20px;
+    }
+
+    .wave-bar {
+      width: 3px;
+      height: 100%;
+      background: var(--accent-cyan);
+      border-radius: 3px;
+      animation: wave 1.2s ease-in-out infinite;
+    }
+
+    .wave-bar:nth-child(2) { animation-delay: 0.2s; }
+    .wave-bar:nth-child(3) { animation-delay: 0.4s; }
+    .wave-bar:nth-child(4) { animation-delay: 0.6s; }
+
+    @keyframes wave {
+      0%, 100% { height: 4px; }
+      50% { height: 20px; }
+    }
+
+    .live-text {
+      font-size: 0.95rem;
+      color: var(--accent-cyan);
+      font-style: italic;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Disabled Input Bar Notification */
+    .input-disabled-banner {
+      padding: 16px 30px;
+      background: rgba(239, 68, 68, 0.08);
+      border-top: 1px solid rgba(239, 68, 68, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #fca5a5;
+      font-size: 0.88rem;
+    }
+
+    .input-lock-tag {
+      background: rgba(239, 68, 68, 0.2);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.75rem;
+      letter-spacing: 0.5px;
+    }
+
+    /* Controls Panel */
+    .control-panel {
+      display: flex;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .icon-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      transform: translateY(-2px);
+    }
+
+    .icon-btn.active-mic {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: rgba(16, 185, 129, 0.5);
+      color: var(--success);
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+    }
+
+    .icon-btn.active-mic i {
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--accent-primary);
+      padding: 12px 20px;
+      border-radius: 12px;
+      color: #fff;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      z-index: 200;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
 </head>
-
 <body>
 
-<div id="app">
+  <div class="glow-sphere"></div>
 
-    <div class="background-grid"></div>
-    <div class="orb one"></div>
-    <div class="orb two"></div>
-
-    <!-- TOP BAR -->
-    <header class="topbar">
-
-        <div class="brand">
-            <div class="brand-icon">◉</div>
-
-            <div>
-                <div class="brand-title">VOX MEETING</div>
-                <div class="brand-sub">
-                    REAL-TIME VOICE TRANSCRIPTION
-                </div>
-            </div>
-        </div>
-
-        <div class="top-actions">
-
-            <div id="connectionStatus"
-                 class="status-pill">
-
-                <span class="status-dot"></span>
-
-                <span id="connectionText">
-                    준비됨
-                </span>
-
-            </div>
-
-            <button
-                class="icon-button"
-                id="mobilePanelBtn">
-                ☰
-            </button>
-
-        </div>
-
-    </header>
-
-
-    <!-- WORKSPACE -->
-    <div class="workspace">
-
-        <!-- MAIN -->
-        <main class="main">
-
-            <!-- WELCOME -->
-            <section
-                class="welcome"
-                id="welcome">
-
-                <div class="welcome-card">
-
-                    <div class="hero-icon">
-                        🎙️
-                    </div>
-
-                    <h1>
-                        음성으로 회의하세요
-                    </h1>
-
-                    <p>
-                        채팅을 직접 입력할 필요가 없습니다.
-                        회의를 시작하면 마이크가 자동으로 활성화되고,
-                        여러분의 음성을 실시간으로 텍스트로 변환하여
-                        회의 채팅에 기록합니다.
-                    </p>
-
-                    <div class="setup">
-
-                        <div class="field">
-                            <label>
-                                내 이름
-                            </label>
-
-                            <input
-                                id="nameInput"
-                                maxlength="30"
-                                placeholder="이름을 입력하세요">
-                        </div>
-
-                        <div class="field">
-                            <label>
-                                회의 이름
-                            </label>
-
-                            <input
-                                id="meetingInput"
-                                maxlength="40"
-                                value="새로운 회의">
-                        </div>
-
-                        <div class="field full">
-
-                            <label>
-                                새 회의 만들기 / 기존 회의 참가
-                            </label>
-
-                            <div class="join-row">
-
-                                <input
-                                    id="roomInput"
-                                    maxlength="30"
-                                    placeholder="회의 ID (참가 시 입력)">
-
-                                <button
-                                    class="join-button"
-                                    id="joinBtn">
-                                    참가
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <button
-                        class="primary"
-                        id="startBtn">
-                        🎙️ 회의 시작
-                    </button>
-
-                </div>
-
-            </section>
-
-
-            <!-- MEETING -->
-            <section
-                id="meetingUI"
-                style="display:none;height:100%;flex-direction:column;">
-
-                <div class="meeting-header">
-
-                    <div class="meeting-title">
-
-                        <span class="live-badge">
-                            LIVE
-                        </span>
-
-                        <span
-                            id="meetingName"
-                            class="meeting-name">
-                            회의
-                        </span>
-
-                        <span
-                            id="meetingCode"
-                            class="meeting-code">
-                        </span>
-
-                    </div>
-
-                    <div class="meeting-tools">
-
-                        <button
-                            class="icon-button"
-                            id="copyRoomBtn"
-                            title="회의 ID 복사">
-                            ⧉
-                        </button>
-
-                        <button
-                            class="icon-button"
-                            id="panelBtn">
-                            ☷
-                        </button>
-
-                    </div>
-
-                </div>
-
-
-                <div class="stage">
-
-                    <div
-                        id="participants"
-                        class="participants">
-                    </div>
-
-                </div>
-
-
-                <div
-                    id="voiceState"
-                    class="voice-state">
-
-                    <div class="wave">
-                        <i></i>
-                        <i></i>
-                        <i></i>
-                        <i></i>
-                        <i></i>
-                    </div>
-
-                    <span id="voiceText">
-                        음성 인식 대기 중
-                    </span>
-
-                </div>
-
-
-                <div class="controls">
-
-                    <button
-                        id="micBtn"
-                        class="control active"
-                        title="음성 인식">
-                        🎙️
-                        <span class="label">
-                            음성 인식
-                        </span>
-                    </button>
-
-                    <button
-                        id="recordBtn"
-                        class="control"
-                        title="기록">
-                        ◉
-                        <span class="label">
-                            기록
-                        </span>
-                    </button>
-
-                    <button
-                        id="endBtn"
-                        class="control end">
-                        ■
-                        <span class="label">
-                            회의 종료
-                        </span>
-                    </button>
-
-                </div>
-
-            </section>
-
-        </main>
-
-
-        <!-- SIDEBAR -->
-        <aside
-            class="sidebar"
-            id="sidebar">
-
-            <div class="sidebar-header">
-
-                <div class="tabs">
-
-                    <button
-                        class="tab active"
-                        data-panel="chatPanel">
-                        채팅
-                    </button>
-
-                    <button
-                        class="tab"
-                        data-panel="peoplePanel">
-                        참가자
-                    </button>
-
-                    <button
-                        class="tab"
-                        data-panel="recordPanel">
-                        기록
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            <!-- CHAT -->
-            <section
-                id="chatPanel"
-                class="panel active">
-
-                <div class="chat-info">
-                    🔒 직접 입력할 수 없는 음성 전용 회의입니다.
-                    말한 내용이 자동으로 채팅에 표시됩니다.
-                </div>
-
-                <div
-                    id="messages"
-                    class="messages">
-                </div>
-
-            </section>
-
-
-            <!-- PEOPLE -->
-            <section
-                id="peoplePanel"
-                class="panel">
-
-                <div
-                    id="peopleList"
-                    class="people-list">
-                </div>
-
-            </section>
-
-
-            <!-- RECORD -->
-            <section
-                id="recordPanel"
-                class="panel">
-
-                <div class="record-toolbar">
-
-                    <button
-                        class="record-button"
-                        id="exportBtn">
-                        기록 내보내기
-                    </button>
-
-                    <button
-                        class="record-button"
-                        id="clearBtn">
-                        기록 삭제
-                    </button>
-
-                </div>
-
-                <div
-                    id="recordList"
-                    class="record-list">
-                </div>
-
-            </section>
-
-        </aside>
-
-    </div>
-
-</div>
-
-
-<div
-    id="toastContainer"
-    class="toast-container">
-</div>
-
-
-<!-- END MODAL -->
-
-<div
-    id="endModal"
-    class="modal">
-
+  <!-- Entry Modal -->
+  <div id="login-modal">
     <div class="modal-card">
+      <div class="brand-logo"><i class="fa-solid fa-microphone-slash"></i> VoiceText</div>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">
+        내 목소리는 들리지 않는 실시간 음성-텍스트 변환 회의실
+      </p>
 
-        <h2>
-            회의를 종료할까요?
-        </h2>
+      <div class="input-group">
+        <label>사용자 닉네임</label>
+        <input type="text" id="nickname-input" class="input-field" placeholder="닉네임을 입력하세요" value="참가자1">
+      </div>
 
-        <p>
-            회의를 종료하면 음성 인식이 중지되고
-            현재 마이크 연결도 해제됩니다.
-        </p>
+      <button class="btn btn-primary" onclick="createRoom()">
+        <i class="fa-solid fa-plus"></i> 새 회의 생성하기
+      </button>
 
-        <div class="modal-buttons">
+      <div style="margin: 20px 0; color: var(--text-muted); font-size: 0.8rem;">또는</div>
 
-            <button
-                id="cancelEnd"
-                class="cancel">
-                취소
-            </button>
+      <div class="input-group" style="margin-top: 0;">
+        <input type="text" id="room-id-input" class="input-field" placeholder="참여할 회의 ID 입력">
+      </div>
 
-            <button
-                id="confirmEnd"
-                class="confirm">
-                종료
-            </button>
+      <button class="btn btn-secondary" onclick="joinRoom()">
+        <i class="fa-solid fa-right-to-bracket"></i> 회의 참가하기
+      </button>
+    </div>
+  </div>
 
+  <!-- Main Meeting UI -->
+  <div class="app-container">
+    
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div>
+        <div class="brand-logo" style="font-size: 1.5rem; margin-bottom: 20px;">
+          <i class="fa-solid fa-waveform"></i> VoiceText
         </div>
 
+        <div class="room-info-card">
+          <div style="font-size: 0.75rem; color: var(--text-muted);">회의 ID (초대 코드)</div>
+          <div class="room-id-badge">
+            <span id="display-room-id">생성 중...</span>
+            <i class="fa-regular fa-copy copy-btn" onclick="copyRoomId()" title="코드 복사"></i>
+          </div>
+        </div>
+
+        <div class="section-title">참가자 목록 (<span id="user-count">1</span>)</div>
+        <div class="participant-list" id="participant-list">
+          <!-- Dynamic Participant list -->
+        </div>
+      </div>
+
+      <!-- Left Controls -->
+      <div>
+        <div class="control-panel">
+          <button id="mic-btn" class="icon-btn active-mic" onclick="toggleMic()">
+            <i class="fa-solid fa-microphone"></i> 마이크 On
+          </button>
+          <button class="icon-btn" onclick="exportTranscript()" title="대화 내용 다운로드">
+            <i class="fa-solid fa-download"></i> 저장
+          </button>
+        </div>
+      </div>
     </div>
 
-</div>
-
-
-<script>
-/* =========================================================
-   VOX MEETING
-   PeerJS + Browser Speech Recognition
-
-   IMPORTANT ARCHITECTURE
-
-   microphone stream:
-       getUserMedia()
-              ↓
-       localMicStream
-              ↓
-       SpeechRecognition
-
-   NO:
-       localMicStream → PeerJS call
-
-   따라서 내 목소리가 상대방에게 들리지 않는다.
-========================================================= */
-
-
-/* =========================================================
-   STATE
-========================================================= */
-
-const state = {
-
-    started:false,
-
-    joining:false,
-
-    isHost:false,
-
-    name:"",
-
-    meetingName:"",
-
-    roomId:"",
-
-    peer:null,
-
-    connections:new Map(),
-
-    micStream:null,
-
-    micPermissionGranted:false,
-
-    recognition:null,
-
-    recognitionRunning:false,
-
-    recognitionWanted:false,
-
-    recognitionRestartTimer:null,
-
-    speaking:false,
-
-    currentTranscript:"",
-
-    messages:[],
-
-    records:[],
-
-    startTime:null,
-
-    timer:null
-};
-
-
-/* =========================================================
-   DOM
-========================================================= */
-
-const $ = id => document.getElementById(id);
-
-const welcome = $("welcome");
-const meetingUI = $("meetingUI");
-
-const nameInput = $("nameInput");
-const meetingInput = $("meetingInput");
-const roomInput = $("roomInput");
-
-const startBtn = $("startBtn");
-const joinBtn = $("joinBtn");
-
-const participants = $("participants");
-const peopleList = $("peopleList");
-const messages = $("messages");
-const recordList = $("recordList");
-
-const sidebar = $("sidebar");
-
-const voiceState = $("voiceState");
-const voiceText = $("voiceText");
-
-const connectionStatus = $("connectionStatus");
-const connectionText = $("connectionText");
-
-
-/* =========================================================
-   UTIL
-========================================================= */
-
-function escapeHTML(text){
-
-    return String(text)
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
-}
-
-
-function getInitial(name){
-
-    const clean = name.trim();
-
-    if(!clean) return "?";
-
-    return clean.charAt(0).toUpperCase();
-}
-
-
-function now(){
-
-    return new Date().toLocaleTimeString(
-        "ko-KR",
-        {
-            hour:"2-digit",
-            minute:"2-digit"
-        }
-    );
-}
-
-
-function toast(title,text){
-
-    const el = document.createElement("div");
-
-    el.className = "toast";
-
-    el.innerHTML = `
-        <strong>${escapeHTML(title)}</strong>
-        <span>${escapeHTML(text)}</span>
-    `;
-
-    $("toastContainer").appendChild(el);
-
-    setTimeout(()=>{
-
-        el.style.opacity="0";
-        el.style.transform="translateY(8px)";
-
-        setTimeout(()=>{
-            el.remove();
-        },300);
-
-    },3200);
-}
-
-
-/* =========================================================
-   STATUS
-========================================================= */
-
-function setStatus(text,live=false){
-
-    connectionText.textContent = text;
-
-    connectionStatus.classList.toggle(
-        "live",
-        live
-    );
-}
-
-
-/* =========================================================
-   PARTICIPANT UI
-========================================================= */
-
-function renderParticipants(){
-
-    participants.innerHTML = "";
-
-    addParticipantCard(
-        "local",
-        state.name,
-        true,
-        true
-    );
-
-    state.connections.forEach((conn,peerId)=>{
-
-        addParticipantCard(
-            peerId,
-            conn.metadata?.name || "참가자",
-            false,
-            true
-        );
-
-    });
-
-    renderPeople();
-}
-
-
-function addParticipantCard(
-    id,
-    name,
-    me,
-    online
-){
-
-    const card = document.createElement("div");
-
-    card.className =
-        "participant" +
-        (me ? " me" : "");
-
-    card.dataset.id = id;
-
-    card.innerHTML = `
-
-        <div class="avatar-area">
-
-            <div class="speaking-ring"></div>
-
-            <div class="avatar">
-                ${escapeHTML(getInitial(name))}
-            </div>
-
+    <!-- Main Chat Workspace -->
+    <div class="main-chat">
+      <!-- Header -->
+      <div class="chat-header">
+        <div class="meeting-status-pill">
+          <div class="status-dot"></div>
+          <span id="status-text">회의 진행 중</span>
         </div>
+        <div class="meeting-timer" id="meeting-timer">00:00:00</div>
+      </div>
 
-        <div class="participant-info">
-
-            <span class="person-name">
-                ${escapeHTML(name)}
-                ${me ? " · 나" : ""}
-            </span>
-
-            <span
-                class="person-status ${online ? "active" : ""}">
-
-                <span class="mic-dot"></span>
-
-                ${online ? "온라인" : "오프라인"}
-
-            </span>
-
+      <!-- Chat Feed -->
+      <div class="chat-messages" id="chat-messages">
+        <!-- System Welcome Message -->
+        <div class="message-card other" style="align-self: center; max-width: 90%;">
+          <div class="message-bubble" style="background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.3); text-align: center; color: #a5b4fc;">
+            <i class="fa-solid fa-shield-halved" style="margin-right: 6px;"></i>
+            <b>보안 대화 모드 활성화됨:</b> 마이크로 말씀하시면 내 실제 목소리는 송출되지 않고 텍스트로만 실시간 전달됩니다.
+          </div>
         </div>
-    `;
+      </div>
 
-    participants.appendChild(card);
-}
-
-
-function setParticipantSpeaking(
-    id,
-    active
-){
-
-    const card =
-        document.querySelector(
-            `.participant[data-id="${CSS.escape(id)}"]`
-        );
-
-    if(card){
-        card.classList.toggle(
-            "speaking",
-            active
-        );
-    }
-}
-
-
-/* =========================================================
-   PEOPLE
-========================================================= */
-
-function renderPeople(){
-
-    peopleList.innerHTML = `
-
-        <div class="people-title">
-            IN THIS MEETING
+      <!-- Live Speech Preview Bar -->
+      <div class="live-preview-container">
+        <div class="speech-wave">
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
         </div>
+        <div id="live-speech-preview" class="live-text">음성을 인식하고 있습니다. 말씀해 보세요...</div>
+      </div>
 
-    `;
+      <!-- Text Input Blocked Warning Banner -->
+      <div class="input-disabled-banner">
+        <span><i class="fa-solid fa-keyboard" style="margin-right: 8px;"></i> 키보드 직접 입력은 비활성화되어 있습니다. 오직 <b>음성</b>으로만 발언할 수 있습니다.</span>
+        <span class="input-lock-tag"><i class="fa-solid fa-lock"></i> CHAT LOCKED</span>
+      </div>
+    </div>
 
-    addPersonRow(
-        state.name,
-        "나 · 음성 인식",
-        true
-    );
+  </div>
 
-    state.connections.forEach(conn=>{
+  <!-- Toast Element -->
+  <div id="toast" class="toast">알림 메시지</div>
 
-        addPersonRow(
-            conn.metadata?.name || "참가자",
-            "참가자",
-            true
-        );
+  <script>
+    // Global State Variables
+    let peer = null;
+    let myPeerId = '';
+    let myNickname = '참가자';
+    let connections = []; // PeerJS DataConnections
+    let recognition = null;
+    let isMicActive = true;
+    let isMeetingActive = false;
+    let timerInterval = null;
+    let secondsElapsed = 0;
 
-    });
-}
+    // Speech Recognition Setup (Web Speech API)
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
+    if (!SpeechRecognition) {
+      alert("현재 브라우저가 음성 인식을 지원하지 않습니다. Chrome 또는 Edge 브라우저를 이용해 주세요.");
+    }
 
-function addPersonRow(
-    name,
-    role,
-    online
-){
+    // Initialize Meeting App
+    function initPeer(customRoomId = null) {
+      peer = customRoomId ? new Peer(customRoomId) : new Peer();
 
-    const row = document.createElement("div");
+      peer.on('open', (id) => {
+        myPeerId = id;
+        document.getElementById('display-room-id').innerText = id;
+        document.getElementById('login-modal').style.opacity = '0';
+        setTimeout(() => {
+          document.getElementById('login-modal').style.visibility = 'hidden';
+        }, 500);
 
-    row.className = "person-row";
+        addParticipant(myNickname, true);
+        startMeetingTimer();
+        startSpeechRecognition();
+        showToast("회의실에 입장하였습니다.");
+      });
 
-    row.innerHTML = `
+      // Handle Incoming Connections (Host side or Peer Mesh)
+      peer.on('connection', (conn) => {
+        setupConnectionListeners(conn);
+      });
 
-        <div class="small-avatar">
-            ${escapeHTML(getInitial(name))}
+      peer.on('error', (err) => {
+        console.error("PeerJS Error:", err);
+        showToast("연결 오류가 발생했습니다: " + err.type);
+      });
+    }
+
+    // Setup Listeners for DataConnection
+    function setupConnectionListeners(conn) {
+      conn.on('open', () => {
+        connections.push(conn);
+        // Handshake: Send My Nickname
+        conn.send({ type: 'handshake', nickname: myNickname });
+      });
+
+      conn.on('data', (data) => {
+        handleIncomingData(data, conn);
+      });
+
+      conn.on('close', () => {
+        connections = connections.filter(c => c !== conn);
+        updateUserCount();
+        showToast("참가자가 퇴장했습니다.");
+      });
+    }
+
+    // Handle Incoming P2P Data Packets
+    function handleIncomingData(data, conn) {
+      if (data.type === 'handshake') {
+        conn.peerNickname = data.nickname;
+        addParticipant(data.nickname, false, conn.peer);
+        showToast(`${data.nickname} 님이 입장하셨습니다.`);
+      } else if (data.type === 'chat') {
+        appendChatMessage(data.sender, data.text, false, data.time);
+      }
+    }
+
+    // Create New Room
+    function createRoom() {
+      const nickInput = document.getElementById('nickname-input').value.trim();
+      if (nickInput) myNickname = nickInput;
+      initPeer();
+    }
+
+    // Join Existing Room
+    function joinRoom() {
+      const nickInput = document.getElementById('nickname-input').value.trim();
+      const roomIdInput = document.getElementById('room-id-input').value.trim();
+
+      if (!roomIdInput) {
+        alert("참여할 회의 ID를 입력해 주세요.");
+        return;
+      }
+
+      if (nickInput) myNickname = nickInput;
+
+      peer = new Peer();
+      peer.on('open', (id) => {
+        myPeerId = id;
+        document.getElementById('display-room-id').innerText = roomIdInput;
+        
+        // Connect to Target Host
+        const conn = peer.connect(roomIdInput);
+        setupConnectionListeners(conn);
+
+        document.getElementById('login-modal').style.opacity = '0';
+        setTimeout(() => {
+          document.getElementById('login-modal').style.visibility = 'hidden';
+        }, 500);
+
+        addParticipant(myNickname, true);
+        startMeetingTimer();
+        startSpeechRecognition();
+        showToast("회의에 참가했습니다.");
+      });
+
+      peer.on('error', (err) => {
+        alert("회의실을 찾을 수 없거나 연결할 수 없습니다.");
+      });
+    }
+
+    // Web Speech API Integration
+    function startSpeechRecognition() {
+      if (!SpeechRecognition) return;
+
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'ko-KR'; // 한국어 설정
+
+      const livePreview = document.getElementById('live-speech-preview');
+
+      recognition.onresult = (event) => {
+        if (!isMicActive) return;
+
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+
+        // Update Real-time Live Preview
+        if (interimTranscript) {
+          livePreview.innerText = interimTranscript;
+        }
+
+        // Finalized Sentence -> Send to Chat
+        if (finalTranscript.trim()) {
+          const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          
+          // Render Locally
+          appendChatMessage(myNickname, finalTranscript, true, currentTime);
+
+          // Broadcast to Peers via PeerJS Data Channels
+          broadcastData({
+            type: 'chat',
+            sender: myNickname,
+            text: finalTranscript,
+            time: currentTime
+          });
+
+          livePreview.innerText = "음성을 인식하고 있습니다. 말씀해 보세요...";
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.warn("Speech recognition error:", event.error);
+        if (event.error !== 'no-speech' && isMicActive) {
+          restartSpeechRecognition();
+        }
+      };
+
+      recognition.onend = () => {
+        // Auto Restart if mic is active
+        if (isMicActive) {
+          try { recognition.start(); } catch(e) {}
+        }
+      };
+
+      try {
+        recognition.start();
+        isMeetingActive = true;
+      } catch (e) {
+        console.error("Mic start failed:", e);
+      }
+    }
+
+    function restartSpeechRecognition() {
+      try {
+        recognition.stop();
+      } catch(e) {}
+      setTimeout(() => {
+        if (isMicActive) try { recognition.start(); } catch(e) {}
+      }, 300);
+    }
+
+    // Toggle Microphone Mute/Unmute
+    function toggleMic() {
+      isMicActive = !isMicActive;
+      const micBtn = document.getElementById('mic-btn');
+
+      if (isMicActive) {
+        micBtn.classList.add('active-mic');
+        micBtn.innerHTML = `<i class="fa-solid fa-microphone"></i> 마이크 On`;
+        document.getElementById('live-speech-preview').innerText = "음성을 인식하고 있습니다. 말씀해 보세요...";
+        try { recognition.start(); } catch(e) {}
+        showToast("마이크가 켜졌습니다.");
+      } else {
+        micBtn.classList.remove('active-mic');
+        micBtn.innerHTML = `<i class="fa-solid fa-microphone-slash" style="color:var(--danger)"></i> 마이크 Off`;
+        document.getElementById('live-speech-preview').innerText = "마이크가 음소거 되었습니다.";
+        try { recognition.stop(); } catch(e) {}
+        showToast("마이크가 음소거 되었습니다.");
+      }
+    }
+
+    // Broadcast Packet to All Connected Peers
+    function broadcastData(data) {
+      connections.forEach(conn => {
+        if (conn.open) {
+          conn.send(data);
+        }
+      });
+    }
+
+    // Render Chat Message Bubble
+    function appendChatMessage(sender, text, isMe, time) {
+      const chatContainer = document.getElementById('chat-messages');
+      const messageCard = document.createElement('div');
+      messageCard.className = `message-card ${isMe ? 'me' : 'other'}`;
+
+      messageCard.innerHTML = `
+        <div class="message-meta">
+          <span>${escapeHtml(sender)}</span>
+          <span>•</span>
+          <span>${time}</span>
         </div>
+        <div class="message-bubble">${escapeHtml(text)}</div>
+      `;
 
-        <div class="row-info">
+      chatContainer.appendChild(messageCard);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
 
-            <div class="row-name">
-                ${escapeHTML(name)}
-            </div>
+    // Add Participant to Sidebar UI
+    function addParticipant(name, isMe = false, peerId = '') {
+      const list = document.getElementById('participant-list');
+      const item = document.createElement('div');
+      item.className = 'participant-item';
+      item.id = `user-${peerId || 'me'}`;
 
-            <div class="row-role">
-                ${escapeHTML(role)}
-            </div>
-
+      item.innerHTML = `
+        <div class="avatar">${name.charAt(0).toUpperCase()}</div>
+        <div style="flex:1;">
+          <div style="font-weight:600; font-size:0.9rem;">${escapeHtml(name)} ${isMe ? '(나)' : ''}</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">실시간 STT 음성 연결됨</div>
         </div>
+        <div class="status-dot"></div>
+      `;
 
-        <div
-            class="row-state ${online ? "online" : ""}">
-        </div>
-    `;
-
-    peopleList.appendChild(row);
-}
-
-
-/* =========================================================
-   MESSAGE
-========================================================= */
-
-function addMessage(
-    name,
-    text,
-    type="voice",
-    broadcast=true
-){
-
-    const message = {
-
-        id:
-            Date.now() +
-            "-" +
-            Math.random()
-                .toString(36)
-                .slice(2),
-
-        name,
-
-        text,
-
-        type,
-
-        time:now(),
-
-        timestamp:Date.now()
-
-    };
-
-    state.messages.push(message);
-
-    renderMessage(message);
-
-    if(type==="voice"){
-
-        state.records.push(message);
-
-        renderRecords();
+      list.appendChild(item);
+      updateUserCount();
     }
 
-    if(
-        broadcast &&
-        state.started
-    ){
-
-        broadcastData({
-
-            type:"message",
-
-            message
-
-        });
-
+    function updateUserCount() {
+      const count = document.querySelectorAll('.participant-item').length;
+      document.getElementById('user-count').innerText = count;
     }
-}
 
+    // Timer Logic
+    function startMeetingTimer() {
+      timerInterval = setInterval(() => {
+        secondsElapsed++;
+        const hrs = String(Math.floor(secondsElapsed / 3600)).padStart(2, '0');
+        const mins = String(Math.floor((secondsElapsed % 3600) / 60)).padStart(2, '0');
+        const secs = String(secondsElapsed % 60).padStart(2, '0');
+        document.getElementById('meeting-timer').innerText = `${hrs}:${mins}:${secs}`;
+      }, 1000);
+    }
 
-function renderMessage(message){
+    // Utility: Copy Room ID
+    function copyRoomId() {
+      const roomId = document.getElementById('display-room-id').innerText;
+      navigator.clipboard.writeText(roomId).then(() => {
+        showToast("회의 ID가 클립보드에 복사되었습니다!");
+      });
+    }
 
-    const el = document.createElement("div");
-
-    el.className =
-        "message " +
-        escapeHTML(message.type);
-
-    const voice =
-        message.type === "voice"
-        ? `
-            <div class="voice-label">
-                🎙 음성 인식
-            </div>
-        `
-        : "";
-
-    el.innerHTML = `
-
-        <div class="message-head">
-
-            <div class="message-avatar">
-                ${escapeHTML(
-                    getInitial(message.name)
-                )}
-            </div>
-
-            <span class="message-name">
-                ${escapeHTML(message.name)}
-            </span>
-
-            <span class="message-time">
-                ${escapeHTML(message.time)}
-            </span>
-
-        </div>
-
-        <div class="message-bubble">
-
-            ${voice}
-
-            ${escapeHTML(message.text)}
-
-        </div>
-    `;
-
-    messages.appendChild(el);
-
-    messages.scrollTop =
-        messages.scrollHeight;
-}
-
-
-function addSystemMessage(text){
-
-    addMessage(
-        "SYSTEM",
-        text,
-        "system",
-        false
-    );
-}
-
-
-/* =========================================================
-   RECORDS
-========================================================= */
-
-function renderRecords(){
-
-    recordList.innerHTML = "";
-
-    if(state.records.length===0){
-
-        recordList.innerHTML = `
-            <div style="
-                color:#626d81;
-                font-size:11px;
-                text-align:center;
-                padding:40px 15px;
-            ">
-                아직 기록이 없습니다.
-            </div>
-        `;
-
+    // Utility: Export Transcript
+    function exportTranscript() {
+      const messages = document.querySelectorAll('.message-card');
+      if (messages.length === 0) {
+        showToast("저장할 대화 내용이 없습니다.");
         return;
-    }
+      }
 
-    state.records.forEach(item=>{
-
-        const el =
-            document.createElement("div");
-
-        el.className="record-item";
-
-        el.innerHTML=`
-
-            <div class="record-time">
-                ${escapeHTML(item.time)}
-                ·
-                ${escapeHTML(item.name)}
-            </div>
-
-            <div class="record-text">
-                ${escapeHTML(item.text)}
-            </div>
-
-        `;
-
-        recordList.appendChild(el);
-    });
-}
-
-
-/* =========================================================
-   SPEECH RECOGNITION
-========================================================= */
-
-function speechSupported(){
-
-    return (
-        "SpeechRecognition" in window ||
-        "webkitSpeechRecognition" in window
-    );
-}
-
-
-function setupSpeechRecognition(){
-
-    if(!speechSupported()){
-
-        toast(
-            "음성 인식 불가",
-            "이 브라우저는 음성 인식을 지원하지 않습니다."
-        );
-
-        return false;
-    }
-
-    const Recognition =
-        window.SpeechRecognition ||
-        window.webkitSpeechRecognition;
-
-    const recognition =
-        new Recognition();
-
-    recognition.lang = "ko-KR";
-
-    /*
-       중요:
-       continuous = true
-       → 한 문장 끝나도 계속 인식
-    */
-    recognition.continuous = true;
-
-    /*
-       interim 결과를 사용하여
-       화면 상태를 자연스럽게 표시
-    */
-    recognition.interimResults = true;
-
-    recognition.maxAlternatives = 1;
-
-    recognition.onstart = ()=>{
-
-        state.recognitionRunning=true;
-
-        voiceState.classList.add(
-            "visible",
-            "listening"
-        );
-
-        voiceText.textContent =
-            "말씀하세요…";
-
-    };
-
-
-    recognition.onresult = event=>{
-
-        let finalText = "";
-
-        let interimText = "";
-
-        for(
-            let i=event.resultIndex;
-            i<event.results.length;
-            i++
-        ){
-
-            const result =
-                event.results[i];
-
-            const text =
-                result[0].transcript.trim();
-
-            if(result.isFinal){
-
-                finalText +=
-                    text + " ";
-
-            }else{
-
-                interimText +=
-                    text + " ";
-
-            }
+      let transcriptText = `=== VoiceText 회의록 (${new Date().toLocaleDateString()}) ===\n\n`;
+      messages.forEach(msg => {
+        const meta = msg.querySelector('.message-meta')?.innerText.replace(/\n/g, ' ') || '';
+        const body = msg.querySelector('.message-bubble')?.innerText || '';
+        if (body) {
+          transcriptText += `[${meta}] ${body}\n`;
         }
-
-
-        /*
-           interim 텍스트는 채팅에 기록하지 않는다.
-           최종 확정된 텍스트만 기록한다.
-        */
-
-        if(interimText){
-
-            state.speaking=true;
-
-            setParticipantSpeaking(
-                "local",
-                true
-            );
-
-            voiceText.textContent =
-                interimText.trim();
-
-        }
-
-
-        if(finalText.trim()){
-
-            state.speaking=false;
-
-            setParticipantSpeaking(
-                "local",
-                false
-            );
-
-            const clean =
-                finalText
-                    .replace(/\s+/g," ")
-                    .trim();
-
-            if(clean){
-
-                addMessage(
-                    state.name,
-                    clean,
-                    "voice",
-                    true
-                );
-            }
-
-            voiceText.textContent =
-                "말씀하세요…";
-        }
-
-    };
-
-
-    recognition.onerror = event=>{
-
-        console.warn(
-            "Speech recognition error:",
-            event.error
-        );
-
-        state.recognitionRunning=false;
-
-        /*
-           no-speech / aborted는
-           사용자에게 오류로 표시하지 않는다.
-        */
-
-        if(
-            event.error === "not-allowed" ||
-            event.error === "service-not-allowed"
-        ){
-
-            state.recognitionWanted=false;
-
-            toast(
-                "마이크 권한 필요",
-                "브라우저에서 마이크 권한을 허용해주세요."
-            );
-
-            return;
-        }
-
-        /*
-           네트워크 등의 일시적 오류라면
-           재시작한다.
-        */
-
-        scheduleRecognitionRestart();
-
-    };
-
-
-    recognition.onend = ()=>{
-
-        state.recognitionRunning=false;
-
-        setParticipantSpeaking(
-            "local",
-            false
-        );
-
-        /*
-           회의 중이고 인식을 계속 원하면
-           SpeechRecognition만 재시작한다.
-
-           getUserMedia()는 호출하지 않는다.
-           따라서 마이크 권한을 다시 요청하지 않는다.
-        */
-
-        if(
-            state.started &&
-            state.recognitionWanted
-        ){
-
-            scheduleRecognitionRestart();
-
-        }else{
-
-            voiceState.classList.remove(
-                "listening"
-            );
-
-            voiceText.textContent =
-                "음성 인식 대기 중";
-        }
-    };
-
-
-    state.recognition=recognition;
-
-    return true;
-}
-
-
-/* =========================================================
-   SPEECH RESTART
-========================================================= */
-
-function scheduleRecognitionRestart(){
-
-    if(state.recognitionRestartTimer)
-        return;
-
-    state.recognitionRestartTimer =
-        setTimeout(()=>{
-
-            state.recognitionRestartTimer=null;
-
-            if(
-                state.started &&
-                state.recognitionWanted &&
-                !state.recognitionRunning
-            ){
-
-                try{
-
-                    state.recognition.start();
-
-                }catch(error){
-
-                    console.warn(
-                        "Recognition restart failed",
-                        error
-                    );
-
-                    /*
-                       이미 실행 중인 경우에는
-                       무시한다.
-                    */
-
-                }
-            }
-
-        },350);
-}
-
-
-/* =========================================================
-   MICROPHONE
-========================================================= */
-
-/*
-   핵심 함수.
-
-   이 함수에서 getUserMedia()를
-   딱 필요한 경우에만 호출한다.
-
-   이전처럼 음성 인식 재시작마다
-   getUserMedia()를 호출하지 않는다.
-*/
-
-async function acquireMicrophone(){
-
-    if(state.micStream){
-
-        /*
-           이미 마이크 스트림을 가지고 있다.
-           권한 재요청 X
-        */
-
-        return state.micStream;
+      });
+
+      const blob = new Blob([transcriptText], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `회의록_${new Date().toISOString().slice(0,10)}.txt`;
+      a.click();
+      showToast("회의록 파일이 다운로드되었습니다.");
     }
 
-
-    if(!navigator.mediaDevices ||
-       !navigator.mediaDevices.getUserMedia){
-
-        throw new Error(
-            "이 브라우저는 마이크 기능을 지원하지 않습니다."
-        );
+    // Toast Alert Helper
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.innerText = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
     }
 
-
-    const stream =
-        await navigator.mediaDevices.getUserMedia({
-
-            audio:{
-                echoCancellation:true,
-                noiseSuppression:true,
-                autoGainControl:true
-            },
-
-            video:false
-
-        });
-
-
-    /*
-       스트림은 SpeechRecognition의
-       브라우저 마이크 권한 활성화용으로 유지한다.
-
-       절대 PeerJS call에 전달하지 않는다.
-    */
-
-    state.micStream=stream;
-
-    state.micPermissionGranted=true;
-
-    return stream;
-}
-
-
-/* =========================================================
-   START SPEECH
-========================================================= */
-
-async function startSpeech(){
-
-    if(!speechSupported()){
-
-        toast(
-            "지원되지 않는 브라우저",
-            "Chrome 또는 Edge 최신 버전을 사용해주세요."
-        );
-
-        return false;
+    // XSS Sanitizer
+    function escapeHtml(text) {
+      return text.replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
     }
-
-
-    /*
-       먼저 마이크 권한을 한 번 확보한다.
-    */
-
-    try{
-
-        await acquireMicrophone();
-
-    }catch(error){
-
-        console.error(error);
-
-        toast(
-            "마이크를 사용할 수 없습니다",
-            "브라우저에서 마이크 권한을 허용해주세요."
-        );
-
-        return false;
-    }
-
-
-    if(!state.recognition){
-
-        if(!setupSpeechRecognition())
-            return false;
-    }
-
-
-    state.recognitionWanted=true;
-
-
-    if(!state.recognitionRunning){
-
-        try{
-
-            state.recognition.start();
-
-        }catch(error){
-
-            console.warn(
-                "recognition.start:",
-                error
-            );
-
-            /*
-               start()가 이미 실행 중인 경우
-               무시
-            */
-
-            scheduleRecognitionRestart();
-        }
-    }
-
-    return true;
-}
-
-
-/* =========================================================
-   STOP SPEECH
-========================================================= */
-
-function stopSpeech(){
-
-    state.recognitionWanted=false;
-
-    if(state.recognitionRestartTimer){
-
-        clearTimeout(
-            state.recognitionRestartTimer
-        );
-
-        state.recognitionRestartTimer=null;
-    }
-
-
-    if(state.recognition){
-
-        try{
-
-            state.recognition.stop();
-
-        }catch(e){}
-    }
-
-
-    state.recognitionRunning=false;
-
-    state.speaking=false;
-
-    setParticipantSpeaking(
-        "local",
-        false
-    );
-
-    voiceState.classList.remove(
-        "visible",
-        "listening"
-    );
-}
-
-
-/* =========================================================
-   RELEASE MIC
-========================================================= */
-
-function releaseMicrophone(){
-
-    if(state.micStream){
-
-        state.micStream
-            .getTracks()
-            .forEach(track=>{
-
-                try{
-                    track.stop();
-                }catch(e){}
-
-            });
-
-        state.micStream=null;
-    }
-
-    state.micPermissionGranted=false;
-}
-
-
-/* =========================================================
-   PEERJS
-========================================================= */
-
-function createPeer(){
-
-    return new Promise(
-        (resolve,reject)=>{
-
-            /*
-               PeerJS Cloud 서버 사용.
-
-               실제 서비스에서는
-               자체 PeerServer를 사용하는 것을 추천.
-            */
-
-            const peer =
-                new Peer({
-
-                    debug:2
-
-                });
-
-
-            peer.on(
-                "open",
-                id=>{
-
-                    state.peer=peer;
-
-                    state.roomId=id;
-
-                    resolve(id);
-
-                }
-            );
-
-
-            peer.on(
-                "error",
-                error=>{
-
-                    console.error(
-                        "PeerJS:",
-                        error
-                    );
-
-                    toast(
-                        "연결 오류",
-                        error.message ||
-                        "Peer 연결에 실패했습니다."
-                    );
-
-                }
-            );
-
-
-            peer.on(
-                "connection",
-                conn=>{
-
-                    setupConnection(conn);
-
-                }
-            );
-
-
-            peer.on(
-                "disconnected",
-                ()=>{
-
-                    setStatus(
-                        "연결 끊김",
-                        false
-                    );
-
-                }
-            );
-
-
-            peer.on(
-                "close",
-                ()=>{
-
-                    setStatus(
-                        "종료됨",
-                        false
-                    );
-
-                }
-            );
-
-        }
-    );
-}
-
-
-/* =========================================================
-   CONNECTION
-========================================================= */
-
-function setupConnection(conn){
-
-    conn.on(
-        "open",
-        ()=>{
-
-            /*
-               절대로 peer.call() 하지 않는다.
-
-               이것이
-               "내 목소리가 상대에게 들리는 문제"
-               를 막는 핵심이다.
-            */
-
-            state.connections.set(
-                conn.peer,
-                conn
-            );
-
-            renderParticipants();
-
-            conn.send({
-
-                type:"hello",
-
-                name:state.name,
-
-                meetingName:state.meetingName
-
-            });
-
-            addSystemMessage(
-                `${conn.metadata?.name || "참가자"}가 연결되었습니다.`
-            );
-
-        }
-    );
-
-
-    conn.on(
-        "data",
-        data=>{
-
-            handlePeerData(
-                conn,
-                data
-            );
-
-        }
-    );
-
-
-    conn.on(
-        "close",
-        ()=>{
-
-            const old =
-                state.connections.get(
-                    conn.peer
-                );
-
-            const name =
-                old?.metadata?.name ||
-                "참가자";
-
-            state.connections.delete(
-                conn.peer
-            );
-
-            renderParticipants();
-
-            addSystemMessage(
-                `${name}의 연결이 종료되었습니다.`
-            );
-
-        }
-    );
-
-
-    conn.on(
-        "error",
-        error=>{
-
-            console.error(
-                "Data connection error",
-                error
-            );
-
-        }
-    );
-}
-
-
-/* =========================================================
-   PEER DATA
-========================================================= */
-
-function handlePeerData(
-    conn,
-    data
-){
-
-    if(!data)
-        return;
-
-
-    if(data.type==="hello"){
-
-        conn.metadata={
-            name:data.name,
-            meetingName:data.meetingName
-        };
-
-        renderParticipants();
-
-        return;
-    }
-
-
-    if(data.type==="message"){
-
-        if(data.message){
-
-            const message =
-                data.message;
-
-            /*
-               이미 받은 메시지를
-               다시 broadcast 하지 않는다.
-            */
-
-            state.messages.push(
-                message
-            );
-
-            renderMessage(
-                message
-            );
-
-            if(message.type==="voice"){
-
-                state.records.push(
-                    message
-                );
-
-                renderRecords();
-            }
-        }
-
-        return;
-    }
-}
-
-
-/* =========================================================
-   BROADCAST
-========================================================= */
-
-function broadcastData(data){
-
-    state.connections.forEach(
-        conn=>{
-
-            if(
-                conn &&
-                conn.open
-            ){
-
-                try{
-
-                    conn.send(data);
-
-                }catch(error){
-
-                    console.warn(
-                        "Broadcast failed",
-                        error
-                    );
-
-                }
-            }
-
-        }
-    );
-}
-
-
-/* =========================================================
-   CREATE MEETING
-========================================================= */
-
-async function createMeeting(){
-
-    const name =
-        nameInput.value.trim();
-
-    const meetingName =
-        meetingInput.value.trim() ||
-        "새로운 회의";
-
-
-    if(!name){
-
-        toast(
-            "이름 필요",
-            "회의에서 사용할 이름을 입력해주세요."
-        );
-
-        nameInput.focus();
-
-        return;
-    }
-
-
-    state.name=name;
-
-    state.meetingName=meetingName;
-
-    state.isHost=true;
-
-    startBtn.disabled=true;
-
-    startBtn.textContent=
-        "연결 준비 중…";
-
-
-    try{
-
-        const id =
-            await createPeer();
-
-        state.roomId=id;
-
-        await enterMeeting();
-
-        toast(
-            "회의 생성 완료",
-            `회의 ID: ${id}`
-        );
-
-    }catch(error){
-
-        console.error(error);
-
-        toast(
-            "회의 생성 실패",
-            error.message ||
-            "잠시 후 다시 시도해주세요."
-        );
-
-        startBtn.disabled=false;
-
-        startBtn.textContent=
-            "🎙️ 회의 시작";
-    }
-}
-
-
-/* =========================================================
-   JOIN MEETING
-========================================================= */
-
-async function joinMeeting(){
-
-    const name =
-        nameInput.value.trim();
-
-    const room =
-        roomInput.value.trim();
-
-
-    if(!name){
-
-        toast(
-            "이름 필요",
-            "이름을 입력해주세요."
-        );
-
-        return;
-    }
-
-
-    if(!room){
-
-        toast(
-            "회의 ID 필요",
-            "참가할 회의 ID를 입력해주세요."
-        );
-
-        return;
-    }
-
-
-    state.name=name;
-
-    state.roomId=room;
-
-    state.isHost=false;
-
-    joinBtn.disabled=true;
-
-    joinBtn.textContent="연결 중…";
-
-
-    try{
-
-        const peer =
-            await new Promise(
-                (resolve,reject)=>{
-
-                    const p =
-                        new Peer({
-                            debug:2
-                        });
-
-                    p.on(
-                        "open",
-                        ()=>{
-                            state.peer=p;
-                            resolve(p);
-                        }
-                    );
-
-                    p.on(
-                        "error",
-                        reject
-                    );
-
-                }
-            );
-
-
-        const conn =
-            peer.connect(
-                room,
-                {
-
-                    reliable:true,
-
-                    metadata:{
-                        name:state.name,
-                        meetingName:""
-                    }
-
-                }
-            );
-
-
-        conn.on(
-            "open",
-            ()=>{
-
-                setupConnection(conn);
-
-                enterMeeting();
-
-            }
-        );
-
-
-        conn.on(
-            "error",
-            error=>{
-
-                toast(
-                    "회의 연결 실패",
-                    error.message ||
-                    "회의 ID를 확인해주세요."
-                );
-
-                joinBtn.disabled=false;
-
-                joinBtn.textContent="참가";
-            }
-        );
-
-
-    }catch(error){
-
-        console.error(error);
-
-        toast(
-            "참가 실패",
-            "회의 ID가 올바른지 확인해주세요."
-        );
-
-        joinBtn.disabled=false;
-
-        joinBtn.textContent="참가";
-    }
-}
-
-
-/* =========================================================
-   ENTER MEETING
-========================================================= */
-
-async function enterMeeting(){
-
-    state.started=true;
-
-    state.startTime=Date.now();
-
-
-    welcome.classList.add(
-        "hidden"
-    );
-
-
-    setTimeout(()=>{
-
-        welcome.style.display="none";
-
-    },500);
-
-
-    meetingUI.style.display="flex";
-
-
-    $("meetingName").textContent =
-        state.meetingName ||
-        "회의";
-
-
-    $("meetingCode").textContent =
-        state.roomId;
-
-
-    setStatus(
-        "연결됨",
-        true
-    );
-
-
-    addSystemMessage(
-        `${state.name}님이 회의에 참여했습니다.`
-    );
-
-
-    renderParticipants();
-
-    renderRecords();
-
-
-    /*
-       회의가 시작되면
-       마이크 권한을 한 번 요청하고
-       음성 인식을 시작한다.
-    */
-
-    const speechOK =
-        await startSpeech();
-
-
-    if(speechOK){
-
-        toast(
-            "마이크 활성화",
-            "말씀하시면 자동으로 회의 채팅에 기록됩니다."
-        );
-
-    }
-
-
-    startTimer();
-}
-
-
-/* =========================================================
-   TIMER
-========================================================= */
-
-function startTimer(){
-
-    if(state.timer)
-        clearInterval(state.timer);
-
-
-    state.timer =
-        setInterval(()=>{
-
-            if(!state.startTime)
-                return;
-
-            const seconds =
-                Math.floor(
-                    (Date.now()-state.startTime)
-                    /1000
-                );
-
-            const h =
-                Math.floor(seconds/3600);
-
-            const m =
-                Math.floor(
-                    (seconds%3600)/60
-                );
-
-            const s =
-                seconds%60;
-
-            const formatted =
-                [
-                    h,
-                    m,
-                    s
-                ]
-                .map(
-                    x =>
-                        String(x)
-                        .padStart(2,"0")
-                )
-                .join(":");
-
-
-            const meetingName =
-                state.meetingName ||
-                "회의";
-
-            $("meetingName").textContent =
-                `${meetingName} · ${formatted}`;
-
-        },1000);
-}
-
-
-/* =========================================================
-   END MEETING
-========================================================= */
-
-function showEndModal(){
-
-    $("endModal")
-        .classList.add("show");
-}
-
-
-function hideEndModal(){
-
-    $("endModal")
-        .classList.remove("show");
-}
-
-
-function endMeeting(){
-
-    hideEndModal();
-
-    state.started=false;
-
-    state.recognitionWanted=false;
-
-
-    stopSpeech();
-
-
-    if(state.timer){
-
-        clearInterval(
-            state.timer
-        );
-
-        state.timer=null;
-    }
-
-
-    /*
-       모든 데이터 연결 종료
-    */
-
-    state.connections.forEach(
-        conn=>{
-
-            try{
-                conn.close();
-            }catch(e){}
-
-        }
-    );
-
-    state.connections.clear();
-
-
-    if(state.peer){
-
-        try{
-            state.peer.destroy();
-        }catch(e){}
-
-        state.peer=null;
-    }
-
-
-    /*
-       실제 마이크 장치 종료
-    */
-
-    releaseMicrophone();
-
-
-    meetingUI.style.display="none";
-
-    welcome.style.display="flex";
-
-    requestAnimationFrame(()=>{
-
-        welcome.classList.remove(
-            "hidden"
-        );
-
-    });
-
-
-    setStatus(
-        "준비됨",
-        false
-    );
-
-
-    startBtn.disabled=false;
-
-    startBtn.textContent=
-        "🎙️ 회의 시작";
-
-    joinBtn.disabled=false;
-
-    joinBtn.textContent=
-        "참가";
-
-
-    toast(
-        "회의 종료",
-        "회의가 안전하게 종료되었습니다."
-    );
-}
-
-
-/* =========================================================
-   COPY ROOM
-========================================================= */
-
-async function copyRoom(){
-
-    if(!state.roomId)
-        return;
-
-    try{
-
-        await navigator.clipboard.writeText(
-            state.roomId
-        );
-
-        toast(
-            "복사 완료",
-            "회의 ID가 클립보드에 복사되었습니다."
-        );
-
-    }catch(e){
-
-        toast(
-            "복사 실패",
-            "회의 ID: " + state.roomId
-        );
-
-    }
-}
-
-
-/* =========================================================
-   TABS
-========================================================= */
-
-document
-    .querySelectorAll(".tab")
-    .forEach(tab=>{
-
-        tab.addEventListener(
-            "click",
-            ()=>{
-
-                document
-                    .querySelectorAll(".tab")
-                    .forEach(
-                        x =>
-                            x.classList.remove(
-                                "active"
-                            )
-                    );
-
-                tab.classList.add(
-                    "active"
-                );
-
-
-                document
-                    .querySelectorAll(".panel")
-                    .forEach(
-                        panel =>
-                            panel.classList.remove(
-                                "active"
-                            )
-                    );
-
-
-                $(tab.dataset.panel)
-                    .classList.add(
-                        "active"
-                    );
-
-            }
-        );
-
-    });
-
-
-/* =========================================================
-   MOBILE PANEL
-========================================================= */
-
-$("panelBtn").onclick =
-    ()=>{
-        sidebar.classList.toggle(
-            "open"
-        );
-    };
-
-
-$("mobilePanelBtn").onclick =
-    ()=>{
-        sidebar.classList.toggle(
-            "open"
-        );
-    };
-
-
-/* =========================================================
-   BUTTONS
-========================================================= */
-
-startBtn.onclick =
-    createMeeting;
-
-joinBtn.onclick =
-    joinMeeting;
-
-
-roomInput.addEventListener(
-    "keydown",
-    event=>{
-
-        if(event.key==="Enter"){
-
-            joinMeeting();
-
-        }
-
-    }
-);
-
-
-nameInput.addEventListener(
-    "keydown",
-    event=>{
-
-        if(event.key==="Enter"){
-
-            createMeeting();
-
-        }
-
-    }
-);
-
-
-$("copyRoomBtn").onclick =
-    copyRoom;
-
-
-$("endBtn").onclick =
-    showEndModal;
-
-
-$("cancelEnd").onclick =
-    hideEndModal;
-
-
-$("confirmEnd").onclick =
-    endMeeting;
-
-
-/* =========================================================
-   MIC BUTTON
-========================================================= */
-
-$("micBtn").onclick =
-    async ()=>{
-
-        if(!state.started)
-            return;
-
-
-        if(state.recognitionWanted){
-
-            /*
-               음성 인식 일시정지
-            */
-
-            state.recognitionWanted=false;
-
-            stopSpeech();
-
-            $("micBtn")
-                .classList.remove(
-                    "active"
-                );
-
-            toast(
-                "음성 인식 일시정지",
-                "다시 누르면 음성 인식이 시작됩니다."
-            );
-
-        }else{
-
-            /*
-               다시 시작
-
-               중요:
-               acquireMicrophone()가
-               이미 존재하는 stream을 재사용하므로
-               getUserMedia()가 다시 호출되지 않는다.
-            */
-
-            const ok =
-                await startSpeech();
-
-            if(ok){
-
-                $("micBtn")
-                    .classList.add(
-                        "active"
-                    );
-
-            }
-
-        }
-
-    };
-
-
-/* =========================================================
-   RECORD BUTTON
-========================================================= */
-
-$("recordBtn").onclick =
-    ()=>{
-
-        document
-            .querySelectorAll(".tab")
-            .forEach(
-                x =>
-                    x.classList.remove(
-                        "active"
-                    )
-            );
-
-        document
-            .querySelector(
-                '[data-panel="recordPanel"]'
-            )
-            .classList.add(
-                "active"
-            );
-
-        document
-            .querySelectorAll(".panel")
-            .forEach(
-                x =>
-                    x.classList.remove(
-                        "active"
-                    )
-            );
-
-        $("recordPanel")
-            .classList.add(
-                "active"
-            );
-
-        sidebar.classList.add(
-            "open"
-        );
-
-    };
-
-
-/* =========================================================
-   EXPORT RECORD
-========================================================= */
-
-$("exportBtn").onclick =
-    ()=>{
-
-        if(state.records.length===0){
-
-            toast(
-                "기록 없음",
-                "내보낼 회의 기록이 없습니다."
-            );
-
-            return;
-        }
-
-
-        const lines=[];
-
-        lines.push(
-            `VOX MEETING - ${state.meetingName}`
-        );
-
-        lines.push(
-            `회의 ID: ${state.roomId}`
-        );
-
-        lines.push("");
-
-        state.records.forEach(
-            item=>{
-
-                lines.push(
-                    `[${item.time}] ${item.name}: ${item.text}`
-                );
-
-            }
-        );
-
-
-        const blob =
-            new Blob(
-                [
-                    lines.join("\n")
-                ],
-                {
-                    type:"text/plain;charset=utf-8"
-                }
-            );
-
-
-        const url =
-            URL.createObjectURL(
-                blob
-            );
-
-
-        const a =
-            document.createElement("a");
-
-        a.href=url;
-
-        a.download =
-            "meeting-record.txt";
-
-        a.click();
-
-
-        URL.revokeObjectURL(
-            url
-        );
-
-
-        toast(
-            "내보내기 완료",
-            "회의 기록 파일을 생성했습니다."
-        );
-    };
-
-
-/* =========================================================
-   CLEAR RECORD
-========================================================= */
-
-$("clearBtn").onclick =
-    ()=>{
-
-        state.records=[];
-
-        renderRecords();
-
-        toast(
-            "기록 삭제",
-            "현재 기기에서 회의 기록을 삭제했습니다."
-        );
-
-    };
-
-
-/* =========================================================
-   PAGE CLOSE
-========================================================= */
-
-window.addEventListener(
-    "beforeunload",
-    ()=>{
-        stopSpeech();
-        releaseMicrophone();
-
-        if(state.peer){
-
-            try{
-                state.peer.destroy();
-            }catch(e){}
-
-        }
-    }
-);
-
-
-/* =========================================================
-   INITIAL
-========================================================= */
-
-renderRecords();
-
-setStatus(
-    "준비됨",
-    false
-);
-
-
-/* =========================================================
-   BROWSER WARNING
-========================================================= */
-
-if(!speechSupported()){
-
-    console.warn(
-        "SpeechRecognition is not supported."
-    );
-
-}
-</script>
-
+  </script>
 </body>
 </html>
