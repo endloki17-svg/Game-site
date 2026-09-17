@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VoiceText Meet - 무음성 실시간 STT 회의실</title>
-  <!-- PeerJS SDK -->
+  <title>VoiceText Meet 2.0 - 무음성 실시간 STT 회의실</title>
+  <!-- PeerJS -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <!-- FontAwesome Icons -->
+  <!-- FontAwesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -15,7 +15,6 @@
     :root {
       --bg-dark: #0b0f19;
       --panel-bg: rgba(22, 30, 49, 0.75);
-      --border-glow: rgba(99, 102, 241, 0.25);
       --accent-primary: #6366f1;
       --accent-cyan: #06b6d4;
       --accent-pink: #ec4899;
@@ -25,554 +24,128 @@
       --danger: #ef4444;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
-      user-select: none;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; user-select: none; }
+    
     body {
-      background-color: var(--bg-dark);
-      color: var(--text-main);
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      overflow: hidden;
-      background-image: 
-        radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
-        radial-gradient(circle at 85% 80%, rgba(6, 182, 212, 0.12) 0%, transparent 40%);
+      background-color: var(--bg-dark); color: var(--text-main); height: 100vh;
+      display: flex; justify-content: center; align-items: center; overflow: hidden;
+      background-image: radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+                        radial-gradient(circle at 85% 80%, rgba(6, 182, 212, 0.12) 0%, transparent 40%);
     }
 
-    /* Ambient Background Glow */
-    .glow-sphere {
-      position: absolute;
-      width: 400px;
-      height: 400px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-pink));
-      filter: blur(140px);
-      opacity: 0.15;
-      pointer-events: none;
-      z-index: 0;
-      animation: float 12s ease-in-out infinite alternate;
-    }
+    /* Modal */
+    #login-modal { position: fixed; inset: 0; background: rgba(11, 15, 25, 0.85); backdrop-filter: blur(20px); z-index: 100; display: flex; justify-content: center; align-items: center; transition: opacity 0.5s; }
+    .modal-card { background: var(--panel-bg); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 40px; width: 100%; max-width: 440px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); text-align: center; }
+    .input-field { width: 100%; padding: 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; font-size: 1rem; outline: none; margin-bottom: 15px; }
+    .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; }
+    .btn-primary { background: linear-gradient(135deg, var(--accent-primary), #4f46e5); color: #fff; }
+    .btn-secondary { background: rgba(255, 255, 255, 0.08); color: var(--text-main); border: 1px solid rgba(255, 255, 255, 0.1); }
 
-    @keyframes float {
-      0% { transform: translate(-50px, -50px) scale(1); }
-      100% { transform: translate(50px, 50px) scale(1.1); }
-    }
-
-    /* Entry Modal */
-    #login-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(11, 15, 25, 0.85);
-      backdrop-filter: blur(20px);
-      z-index: 100;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      transition: opacity 0.5s ease, visibility 0.5s ease;
-    }
-
-    .modal-card {
-      background: var(--panel-bg);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 24px;
-      padding: 40px;
-      width: 100%;
-      max-width: 440px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px var(--border-glow);
-      text-align: center;
-      position: relative;
-    }
-
-    .brand-logo {
-      font-size: 2.2rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, #a5b4fc, var(--accent-cyan));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin-bottom: 8px;
-    }
-
-    .input-group {
-      margin: 20px 0;
-      text-align: left;
-    }
-
-    .input-group label {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      margin-bottom: 8px;
-      display: block;
-    }
-
-    .input-field {
-      width: 100%;
-      padding: 14px 18px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: #fff;
-      font-size: 1rem;
-      outline: none;
-      transition: all 0.3s ease;
-    }
-
-    .input-field:focus {
-      border-color: var(--accent-primary);
-      box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
-      background: rgba(255, 255, 255, 0.08);
-    }
-
-    .btn {
-      width: 100%;
-      padding: 14px;
-      border-radius: 12px;
-      border: none;
-      font-weight: 700;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent-primary), #4f46e5);
-      color: #fff;
-      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(99, 102, 241, 0.6);
-    }
-
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--text-main);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      margin-top: 10px;
-    }
-
-    .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.15);
-    }
-
-    /* Main App Layout */
-    .app-container {
-      width: 95vw;
-      height: 92vh;
-      max-width: 1400px;
-      background: var(--panel-bg);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 28px;
-      display: grid;
-      grid-template-columns: 320px 1fr;
-      overflow: hidden;
-      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
-      z-index: 10;
-    }
-
+    /* Layout */
+    .app-container { width: 95vw; height: 92vh; max-width: 1400px; background: var(--panel-bg); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 28px; display: flex; overflow: hidden; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6); }
+    
     /* Sidebar */
-    .sidebar {
-      background: rgba(15, 23, 42, 0.6);
-      border-right: 1px solid rgba(255, 255, 255, 0.08);
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
+    .sidebar { width: 320px; background: rgba(15, 23, 42, 0.6); border-right: 1px solid rgba(255, 255, 255, 0.08); padding: 24px; display: flex; flex-direction: column; flex-shrink: 0; }
+    .room-info-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 16px; margin-bottom: 20px; }
+    .room-id-badge { display: flex; align-items: center; justify-content: space-between; background: rgba(0, 0, 0, 0.3); padding: 10px; border-radius: 10px; margin-top: 8px; color: var(--accent-cyan); font-family: monospace; cursor: pointer; }
+    .participant-list { flex: 1; overflow-y: auto; margin-bottom: 20px; }
+    .participant-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px; background: rgba(255, 255, 255, 0.02); margin-bottom: 8px; }
+    .avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-primary), var(--accent-cyan)); display: flex; align-items: center; justify-content: center; font-weight: bold; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 8px var(--success); }
 
-    .room-info-card {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 16px;
-      padding: 16px;
-      margin-bottom: 20px;
-    }
+    /* Controls */
+    .control-panel { display: flex; flex-direction: column; gap: 10px; }
+    .icon-btn { padding: 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); color: #fff; cursor: pointer; font-weight: 600; transition: 0.2s; }
+    .icon-btn.active-mic { background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.5); color: var(--success); }
+    .icon-btn.active-tts { background: rgba(236, 72, 153, 0.2); border-color: rgba(236, 72, 153, 0.5); color: var(--accent-pink); }
 
-    .room-id-badge {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: rgba(0, 0, 0, 0.3);
-      padding: 10px 14px;
-      border-radius: 10px;
-      margin-top: 8px;
-      font-family: monospace;
-      font-size: 0.9rem;
-      color: var(--accent-cyan);
-    }
-
-    .copy-btn {
-      cursor: pointer;
-      color: var(--text-muted);
-      transition: color 0.2s;
-    }
-
-    .copy-btn:hover { color: #fff; }
-
-    .participant-list {
-      flex: 1;
-      overflow-y: auto;
-      margin-bottom: 20px;
-    }
-
-    .section-title {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-      font-weight: 700;
-    }
-
-    .participant-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.02);
-      margin-bottom: 8px;
-      animation: fadeIn 0.3s ease;
-    }
-
-    .avatar {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-cyan));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      font-size: 0.9rem;
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--success);
-      box-shadow: 0 0 8px var(--success);
-    }
-
-    /* Main Chat Area */
-    .main-chat {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      position: relative;
-    }
-
-    .chat-header {
-      padding: 20px 30px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .meeting-status-pill {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 14px;
-      border-radius: 20px;
-      background: rgba(16, 185, 129, 0.1);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      color: var(--success);
-      font-size: 0.85rem;
-      font-weight: 600;
-    }
-
-    .meeting-timer {
-      font-family: monospace;
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text-main);
-    }
-
+    /* Main Chat Workspace */
+    .main-chat { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+    
+    .chat-header { padding: 20px 30px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+    
+    /* 🚀 버그 수정: 무한 스크롤 및 텍스트 줄바꿈 고정 */
     .chat-messages {
-      flex: 1;
-      padding: 30px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      scroll-behavior: smooth;
+      flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth;
     }
-
-    /* Speech Bubble Styling */
-    .message-card {
-      max-width: 70%;
-      display: flex;
-      flex-direction: column;
-      animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .message-card.me {
-      align-self: flex-end;
-    }
-
-    .message-card.other {
-      align-self: flex-start;
-    }
-
-    .message-meta {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-      display: flex;
-      gap: 8px;
-    }
-
+    .message-card { max-width: 75%; display: flex; flex-direction: column; animation: slideUp 0.3s; }
+    .message-card.me { align-self: flex-end; }
+    .message-card.other { align-self: flex-start; }
+    .message-meta { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; display: flex; gap: 8px; }
     .message-card.me .message-meta { justify-content: flex-end; }
+    .message-bubble { padding: 14px 18px; border-radius: 18px; font-size: 1rem; line-height: 1.5; word-break: break-word; } /* 텍스트 줄바꿈 Fix */
+    .message-card.me .message-bubble { background: linear-gradient(135deg, var(--accent-primary), #4338ca); color: #fff; border-bottom-right-radius: 0; }
+    .message-card.other .message-bubble { background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.08); border-bottom-left-radius: 0; }
 
-    .message-bubble {
-      padding: 14px 18px;
-      border-radius: 18px;
-      font-size: 0.98rem;
-      line-height: 1.5;
-      word-break: break-word;
-      position: relative;
-    }
+    /* 🚀 신규: 실시간 상대방 발언 감지 */
+    .partner-live-status { padding: 8px 30px; background: rgba(6, 182, 212, 0.05); color: var(--accent-cyan); font-size: 0.85rem; display: flex; align-items: center; gap: 8px; height: 35px; opacity: 0; transition: opacity 0.3s; flex-shrink: 0; }
+    .partner-live-status.show { opacity: 1; }
 
-    .message-card.me .message-bubble {
-      background: linear-gradient(135deg, var(--accent-primary), #4338ca);
-      color: #fff;
-      border-bottom-right-radius: 4px;
-      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
-    }
+    /* Live Voice Preview */
+    .live-preview-container { padding: 15px 30px; background: rgba(15, 23, 42, 0.6); border-top: 1px solid rgba(255, 255, 255, 0.05); flex-shrink: 0; display: flex; align-items: center; gap: 10px; color: var(--accent-cyan); }
+    
+    /* 🚀 신규: 이모지 리액션 바 */
+    .reaction-bar { padding: 12px 30px; background: rgba(11, 15, 25, 0.9); border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+    .lock-warn { color: var(--danger); font-size: 0.85rem; font-weight: bold; }
+    .emoji-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; transition: 0.2s; padding: 0 5px; }
+    .emoji-btn:hover { transform: scale(1.3); }
 
-    .message-card.other .message-bubble {
-      background: rgba(255, 255, 255, 0.07);
-      color: #fff;
-      border-bottom-left-radius: 4px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
+    /* Floating Emoji Animation */
+    .floating-emoji { position: absolute; bottom: 60px; font-size: 3rem; pointer-events: none; z-index: 50; animation: floatUp 2.5s ease-out forwards; }
+    @keyframes floatUp { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-30px) scale(1.2); } 100% { opacity: 0; transform: translateY(-300px) scale(1); } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* Live Voice Preview Indicator */
-    .live-preview-container {
-      padding: 15px 30px;
-      background: rgba(15, 23, 42, 0.4);
-      border-top: 1px solid rgba(255, 255, 255, 0.05);
-      min-height: 60px;
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
-
-    .speech-wave {
-      display: flex;
-      align-items: center;
-      gap: 3px;
-      height: 20px;
-    }
-
-    .wave-bar {
-      width: 3px;
-      height: 100%;
-      background: var(--accent-cyan);
-      border-radius: 3px;
-      animation: wave 1.2s ease-in-out infinite;
-    }
-
-    .wave-bar:nth-child(2) { animation-delay: 0.2s; }
-    .wave-bar:nth-child(3) { animation-delay: 0.4s; }
-    .wave-bar:nth-child(4) { animation-delay: 0.6s; }
-
-    @keyframes wave {
-      0%, 100% { height: 4px; }
-      50% { height: 20px; }
-    }
-
-    .live-text {
-      font-size: 0.95rem;
-      color: var(--accent-cyan);
-      font-style: italic;
-      flex: 1;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* Disabled Input Bar Notification */
-    .input-disabled-banner {
-      padding: 16px 30px;
-      background: rgba(239, 68, 68, 0.08);
-      border-top: 1px solid rgba(239, 68, 68, 0.2);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      color: #fca5a5;
-      font-size: 0.88rem;
-    }
-
-    .input-lock-tag {
-      background: rgba(239, 68, 68, 0.2);
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-weight: 700;
-      font-size: 0.75rem;
-      letter-spacing: 0.5px;
-    }
-
-    /* Controls Panel */
-    .control-panel {
-      display: flex;
-      gap: 12px;
-      margin-top: 10px;
-    }
-
-    .icon-btn {
-      flex: 1;
-      padding: 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(255, 255, 255, 0.05);
-      color: #fff;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      font-weight: 600;
-      transition: all 0.2s;
-    }
-
-    .icon-btn:hover {
-      background: rgba(255, 255, 255, 0.12);
-      transform: translateY(-2px);
-    }
-
-    .icon-btn.active-mic {
-      background: rgba(16, 185, 129, 0.2);
-      border-color: rgba(16, 185, 129, 0.5);
-      color: var(--success);
-      box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
-    }
-
-    .icon-btn.active-mic i {
-      animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.2); }
-      100% { transform: scale(1); }
-    }
-
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(15px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    /* Toast Notification */
-    .toast {
-      position: fixed;
-      bottom: 30px;
-      right: 30px;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid var(--accent-primary);
-      padding: 12px 20px;
-      border-radius: 12px;
-      color: #fff;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      z-index: 200;
-      opacity: 0;
-      transform: translateY(20px);
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .toast.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    /* Toast */
+    .toast { position: fixed; bottom: 30px; right: 30px; background: rgba(15, 23, 42, 0.9); border: 1px solid var(--accent-primary); padding: 12px 20px; border-radius: 12px; z-index: 200; opacity: 0; transform: translateY(20px); transition: 0.3s; }
+    .toast.show { opacity: 1; transform: translateY(0); }
   </style>
 </head>
 <body>
 
-  <div class="glow-sphere"></div>
-
   <!-- Entry Modal -->
   <div id="login-modal">
     <div class="modal-card">
-      <div class="brand-logo"><i class="fa-solid fa-microphone-slash"></i> VoiceText</div>
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">
-        내 목소리는 들리지 않는 실시간 음성-텍스트 변환 회의실
-      </p>
-
-      <div class="input-group">
-        <label>사용자 닉네임</label>
-        <input type="text" id="nickname-input" class="input-field" placeholder="닉네임을 입력하세요" value="참가자1">
-      </div>
-
-      <button class="btn btn-primary" onclick="createRoom()">
-        <i class="fa-solid fa-plus"></i> 새 회의 생성하기
-      </button>
-
+      <h2 style="margin-bottom: 10px; color: #a5b4fc;"><i class="fa-solid fa-microphone-slash"></i> VoiceText 2.0</h2>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 24px;">내 목소리가 차단되는 STT 보안 회의실</p>
+      
+      <input type="text" id="nickname-input" class="input-field" placeholder="닉네임을 입력하세요" value="참가자">
+      <button class="btn btn-primary" onclick="createRoom()"><i class="fa-solid fa-plus"></i> 새 회의 생성하기</button>
+      
       <div style="margin: 20px 0; color: var(--text-muted); font-size: 0.8rem;">또는</div>
-
-      <div class="input-group" style="margin-top: 0;">
-        <input type="text" id="room-id-input" class="input-field" placeholder="참여할 회의 ID 입력">
-      </div>
-
-      <button class="btn btn-secondary" onclick="joinRoom()">
-        <i class="fa-solid fa-right-to-bracket"></i> 회의 참가하기
-      </button>
+      
+      <input type="text" id="room-id-input" class="input-field" placeholder="초대받은 회의 ID 입력">
+      <button class="btn btn-secondary" onclick="joinRoom()"><i class="fa-solid fa-right-to-bracket"></i> 회의 참가하기</button>
     </div>
   </div>
 
-  <!-- Main Meeting UI -->
+  <!-- Main App -->
   <div class="app-container">
     
     <!-- Sidebar -->
     <div class="sidebar">
-      <div>
-        <div class="brand-logo" style="font-size: 1.5rem; margin-bottom: 20px;">
-          <i class="fa-solid fa-waveform"></i> VoiceText
-        </div>
-
-        <div class="room-info-card">
-          <div style="font-size: 0.75rem; color: var(--text-muted);">회의 ID (초대 코드)</div>
-          <div class="room-id-badge">
-            <span id="display-room-id">생성 중...</span>
-            <i class="fa-regular fa-copy copy-btn" onclick="copyRoomId()" title="코드 복사"></i>
-          </div>
-        </div>
-
-        <div class="section-title">참가자 목록 (<span id="user-count">1</span>)</div>
-        <div class="participant-list" id="participant-list">
-          <!-- Dynamic Participant list -->
+      <h2 style="color: #a5b4fc; margin-bottom: 20px;"><i class="fa-solid fa-waveform"></i> VoiceText</h2>
+      <div class="room-info-card">
+        <div style="font-size: 0.75rem; color: var(--text-muted);">회의 ID (클릭하여 복사)</div>
+        <div class="room-id-badge" onclick="copyRoomId()">
+          <span id="display-room-id">생성 중...</span>
+          <i class="fa-regular fa-copy"></i>
         </div>
       </div>
+      
+      <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px; font-weight: bold;">참가자 목록 (<span id="user-count">1</span>)</div>
+      <div class="participant-list" id="participant-list"></div>
 
-      <!-- Left Controls -->
-      <div>
-        <div class="control-panel">
-          <button id="mic-btn" class="icon-btn active-mic" onclick="toggleMic()">
-            <i class="fa-solid fa-microphone"></i> 마이크 On
-          </button>
-          <button class="icon-btn" onclick="exportTranscript()" title="대화 내용 다운로드">
-            <i class="fa-solid fa-download"></i> 저장
-          </button>
-        </div>
+      <div class="control-panel">
+        <button id="mic-btn" class="icon-btn active-mic" onclick="toggleMic()">
+          <i class="fa-solid fa-microphone"></i> 마이크 On
+        </button>
+        <!-- 🚀 신규: TTS 기능 버튼 -->
+        <button id="tts-btn" class="icon-btn" onclick="toggleTTS()">
+          <i class="fa-solid fa-volume-xmark"></i> TTS 읽어주기 Off
+        </button>
+        <button class="icon-btn" onclick="exportTranscript()">
+          <i class="fa-solid fa-download"></i> 대화 기록 저장
+        </button>
       </div>
     </div>
 
@@ -580,107 +153,85 @@
     <div class="main-chat">
       <!-- Header -->
       <div class="chat-header">
-        <div class="meeting-status-pill">
-          <div class="status-dot"></div>
-          <span id="status-text">회의 진행 중</span>
+        <div style="display: flex; gap:10px; align-items: center; color: var(--success); font-weight: bold;">
+          <div class="status-dot"></div> 실시간 보안 회의 중
         </div>
-        <div class="meeting-timer" id="meeting-timer">00:00:00</div>
+        <div id="meeting-timer" style="font-family: monospace; font-size: 1.1rem; font-weight: bold;">00:00:00</div>
+      </div>
+
+      <!-- 🚀 신규: 파트너 발언 감지 인디케이터 -->
+      <div id="partner-status" class="partner-live-status">
+        <i class="fa-solid fa-comment-dots fa-fade"></i> <span id="partner-status-text">상대방이 말하는 중...</span>
       </div>
 
       <!-- Chat Feed -->
       <div class="chat-messages" id="chat-messages">
-        <!-- System Welcome Message -->
         <div class="message-card other" style="align-self: center; max-width: 90%;">
           <div class="message-bubble" style="background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.3); text-align: center; color: #a5b4fc;">
-            <i class="fa-solid fa-shield-halved" style="margin-right: 6px;"></i>
-            <b>보안 대화 모드 활성화됨:</b> 마이크로 말씀하시면 내 실제 목소리는 송출되지 않고 텍스트로만 실시간 전달됩니다.
+            <b>시스템:</b> 회의가 시작되었습니다. 키보드 채팅은 불가하며, 음성으로만 발언할 수 있습니다.
           </div>
         </div>
       </div>
 
-      <!-- Live Speech Preview Bar -->
+      <!-- Live Voice Preview -->
       <div class="live-preview-container">
-        <div class="speech-wave">
-          <div class="wave-bar"></div>
-          <div class="wave-bar"></div>
-          <div class="wave-bar"></div>
-          <div class="wave-bar"></div>
-        </div>
-        <div id="live-speech-preview" class="live-text">음성을 인식하고 있습니다. 말씀해 보세요...</div>
+        <i class="fa-solid fa-ear-listen fa-beat"></i>
+        <div id="live-speech-preview" style="font-style: italic;">내 음성 감지 대기 중...</div>
       </div>
 
-      <!-- Text Input Blocked Warning Banner -->
-      <div class="input-disabled-banner">
-        <span><i class="fa-solid fa-keyboard" style="margin-right: 8px;"></i> 키보드 직접 입력은 비활성화되어 있습니다. 오직 <b>음성</b>으로만 발언할 수 있습니다.</span>
-        <span class="input-lock-tag"><i class="fa-solid fa-lock"></i> CHAT LOCKED</span>
+      <!-- 🚀 신규: 리액션 바 -->
+      <div class="reaction-bar">
+        <div class="lock-warn"><i class="fa-solid fa-lock"></i> 텍스트 입력 제한됨</div>
+        <div>
+          <button class="emoji-btn" onclick="sendReaction('👍')">👍</button>
+          <button class="emoji-btn" onclick="sendReaction('👏')">👏</button>
+          <button class="emoji-btn" onclick="sendReaction('❤️')">❤️</button>
+          <button class="emoji-btn" onclick="sendReaction('😂')">😂</button>
+          <button class="emoji-btn" onclick="sendReaction('❓')">❓</button>
+        </div>
       </div>
     </div>
 
   </div>
 
-  <!-- Toast Element -->
-  <div id="toast" class="toast">알림 메시지</div>
+  <div id="toast" class="toast">알림</div>
 
   <script>
     // Global State Variables
-    let peer = null;
-    let myPeerId = '';
-    let myNickname = '참가자';
-    let connections = []; // PeerJS DataConnections
-    let recognition = null;
-    let isMicActive = true;
-    let isMeetingActive = false;
-    let timerInterval = null;
-    let secondsElapsed = 0;
+    let peer = null, myPeerId = '', myNickname = '참가자', connections = [];
+    let recognition = null, isMicActive = true;
+    let isTTSActive = false; // 🚀 신규: TTS 상태 변수
+    let timerInterval = null, secondsElapsed = 0;
+    let partnerTypingTimeout = null; // 🚀 신규: 파트너 타이핑 타이머
 
-    // Speech Recognition Setup (Web Speech API)
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    if (!SpeechRecognition) {
-      alert("현재 브라우저가 음성 인식을 지원하지 않습니다. Chrome 또는 Edge 브라우저를 이용해 주세요.");
-    }
-
-    // Initialize Meeting App
+    // 1. PeerJS 초기화 및 연결 설정
     function initPeer(customRoomId = null) {
       peer = customRoomId ? new Peer(customRoomId) : new Peer();
-
+      
       peer.on('open', (id) => {
         myPeerId = id;
         document.getElementById('display-room-id').innerText = id;
         document.getElementById('login-modal').style.opacity = '0';
-        setTimeout(() => {
-          document.getElementById('login-modal').style.visibility = 'hidden';
-        }, 500);
-
+        setTimeout(() => document.getElementById('login-modal').style.display = 'none', 500);
+        
         addParticipant(myNickname, true);
         startMeetingTimer();
         startSpeechRecognition();
-        showToast("회의실에 입장하였습니다.");
+        showToast("회의실을 생성했습니다. ID를 공유하세요.");
       });
 
-      // Handle Incoming Connections (Host side or Peer Mesh)
-      peer.on('connection', (conn) => {
-        setupConnectionListeners(conn);
-      });
-
-      peer.on('error', (err) => {
-        console.error("PeerJS Error:", err);
-        showToast("연결 오류가 발생했습니다: " + err.type);
-      });
+      peer.on('connection', setupConnectionListeners);
+      peer.on('error', (err) => showToast("연결 에러: " + err.type));
     }
 
-    // Setup Listeners for DataConnection
     function setupConnectionListeners(conn) {
       conn.on('open', () => {
         connections.push(conn);
-        // Handshake: Send My Nickname
         conn.send({ type: 'handshake', nickname: myNickname });
       });
-
-      conn.on('data', (data) => {
-        handleIncomingData(data, conn);
-      });
-
+      conn.on('data', (data) => handleIncomingData(data, conn));
       conn.on('close', () => {
         connections = connections.filter(c => c !== conn);
         updateUserCount();
@@ -688,275 +239,274 @@
       });
     }
 
-    // Handle Incoming P2P Data Packets
+    // 2. 수신된 데이터 패킷 처리
     function handleIncomingData(data, conn) {
       if (data.type === 'handshake') {
         conn.peerNickname = data.nickname;
         addParticipant(data.nickname, false, conn.peer);
-        showToast(`${data.nickname} 님이 입장하셨습니다.`);
-      } else if (data.type === 'chat') {
+        showToast(`${data.nickname}님이 입장했습니다.`);
+      } 
+      else if (data.type === 'chat') {
         appendChatMessage(data.sender, data.text, false, data.time);
+        hidePartnerStatus(); // 문장 완성 시 '말하는 중' 숨김
+        if (isTTSActive) playTTS(data.text); // 🚀 신규: TTS 재생
+      } 
+      else if (data.type === 'interim') {
+        showPartnerStatus(`${data.sender}님이 말하고 있습니다...`); // 🚀 신규: 실시간 감지
+      } 
+      else if (data.type === 'reaction') {
+        showFloatingEmoji(data.emoji); // 🚀 신규: 리액션 수신
       }
     }
 
-    // Create New Room
     function createRoom() {
-      const nickInput = document.getElementById('nickname-input').value.trim();
-      if (nickInput) myNickname = nickInput;
+      const n = document.getElementById('nickname-input').value.trim();
+      if(n) myNickname = n;
       initPeer();
     }
 
-    // Join Existing Room
     function joinRoom() {
-      const nickInput = document.getElementById('nickname-input').value.trim();
-      const roomIdInput = document.getElementById('room-id-input').value.trim();
-
-      if (!roomIdInput) {
-        alert("참여할 회의 ID를 입력해 주세요.");
-        return;
-      }
-
-      if (nickInput) myNickname = nickInput;
-
+      const n = document.getElementById('nickname-input').value.trim();
+      const rid = document.getElementById('room-id-input').value.trim();
+      if(!rid) return alert("회의 ID를 입력하세요.");
+      if(n) myNickname = n;
+      
       peer = new Peer();
       peer.on('open', (id) => {
         myPeerId = id;
-        document.getElementById('display-room-id').innerText = roomIdInput;
+        document.getElementById('display-room-id').innerText = rid;
         
-        // Connect to Target Host
-        const conn = peer.connect(roomIdInput);
+        const conn = peer.connect(rid);
         setupConnectionListeners(conn);
-
-        document.getElementById('login-modal').style.opacity = '0';
-        setTimeout(() => {
-          document.getElementById('login-modal').style.visibility = 'hidden';
-        }, 500);
-
+        
+        document.getElementById('login-modal').style.display = 'none';
         addParticipant(myNickname, true);
         startMeetingTimer();
         startSpeechRecognition();
         showToast("회의에 참가했습니다.");
       });
-
-      peer.on('error', (err) => {
-        alert("회의실을 찾을 수 없거나 연결할 수 없습니다.");
-      });
+      peer.on('error', () => alert("회의실을 찾을 수 없습니다."));
     }
 
-    // Web Speech API Integration
+    // 3. Web Speech API (권한 거부 에러 완벽 해결)
     function startSpeechRecognition() {
-      if (!SpeechRecognition) return;
-
+      if (!SpeechRecognition) return alert("크롬 또는 엣지 브라우저를 이용해 주세요.");
+      
       recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = 'ko-KR'; // 한국어 설정
+      recognition.lang = 'ko-KR';
 
       const livePreview = document.getElementById('live-speech-preview');
 
       recognition.onresult = (event) => {
         if (!isMicActive) return;
-
         let interimTranscript = '';
         let finalTranscript = '';
 
         for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
-          }
+          if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+          else interimTranscript += event.results[i][0].transcript;
         }
 
-        // Update Real-time Live Preview
         if (interimTranscript) {
           livePreview.innerText = interimTranscript;
+          // 🚀 신규: 상대방에게 내가 말하고 있음을 실시간 전송
+          broadcastData({ type: 'interim', sender: myNickname }); 
         }
 
-        // Finalized Sentence -> Send to Chat
         if (finalTranscript.trim()) {
-          const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          
-          // Render Locally
-          appendChatMessage(myNickname, finalTranscript, true, currentTime);
-
-          // Broadcast to Peers via PeerJS Data Channels
-          broadcastData({
-            type: 'chat',
-            sender: myNickname,
-            text: finalTranscript,
-            time: currentTime
-          });
-
-          livePreview.innerText = "음성을 인식하고 있습니다. 말씀해 보세요...";
+          const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          appendChatMessage(myNickname, finalTranscript, true, time);
+          broadcastData({ type: 'chat', sender: myNickname, text: finalTranscript, time: time });
+          livePreview.innerText = "내 음성 감지 대기 중...";
         }
       };
 
       recognition.onerror = (event) => {
-        console.warn("Speech recognition error:", event.error);
-        if (event.error !== 'no-speech' && isMicActive) {
-          restartSpeechRecognition();
+        console.warn("Speech Error:", event.error);
+        if (event.error === 'not-allowed') {
+          isMicActive = false;
+          const micBtn = document.getElementById('mic-btn');
+          micBtn.classList.remove('active-mic');
+          micBtn.innerHTML = `<i class="fa-solid fa-microphone-slash" style="color:var(--danger)"></i> 권한 차단됨`;
+          document.getElementById('live-speech-preview').innerText = "마이크 권한이 차단되었습니다.";
+          showToast("브라우저 설정에서 마이크를 허용해 주세요.");
+        } else if (event.error !== 'no-speech' && isMicActive) {
+          // 일시적 오류 시 자동 재시작
+          setTimeout(() => { try { recognition.start(); } catch(e){} }, 300);
         }
       };
 
       recognition.onend = () => {
-        // Auto Restart if mic is active
+        // 마이크가 켜져있으면 끊겨도 계속 재시작 (무한 유지)
         if (isMicActive) {
-          try { recognition.start(); } catch(e) {}
+          try { recognition.start(); } catch(e){}
         }
       };
 
-      try {
-        recognition.start();
-        isMeetingActive = true;
-      } catch (e) {
-        console.error("Mic start failed:", e);
-      }
+      try { recognition.start(); } catch(e) {}
     }
 
-    function restartSpeechRecognition() {
-      try {
-        recognition.stop();
-      } catch(e) {}
-      setTimeout(() => {
-        if (isMicActive) try { recognition.start(); } catch(e) {}
-      }, 300);
-    }
-
-    // Toggle Microphone Mute/Unmute
+    // 4. 기능: 마이크 토글
     function toggleMic() {
       isMicActive = !isMicActive;
       const micBtn = document.getElementById('mic-btn');
-
       if (isMicActive) {
         micBtn.classList.add('active-mic');
         micBtn.innerHTML = `<i class="fa-solid fa-microphone"></i> 마이크 On`;
-        document.getElementById('live-speech-preview').innerText = "음성을 인식하고 있습니다. 말씀해 보세요...";
-        try { recognition.start(); } catch(e) {}
-        showToast("마이크가 켜졌습니다.");
+        document.getElementById('live-speech-preview').innerText = "내 음성 감지 대기 중...";
+        try { recognition.start(); } catch(e){}
       } else {
         micBtn.classList.remove('active-mic');
         micBtn.innerHTML = `<i class="fa-solid fa-microphone-slash" style="color:var(--danger)"></i> 마이크 Off`;
         document.getElementById('live-speech-preview').innerText = "마이크가 음소거 되었습니다.";
-        try { recognition.stop(); } catch(e) {}
-        showToast("마이크가 음소거 되었습니다.");
+        try { recognition.stop(); } catch(e){}
       }
     }
 
-    // Broadcast Packet to All Connected Peers
+    // 5. 🚀 신규 기능: TTS 토글 및 재생
+    function toggleTTS() {
+      isTTSActive = !isTTSActive;
+      const ttsBtn = document.getElementById('tts-btn');
+      if (isTTSActive) {
+        ttsBtn.classList.add('active-tts');
+        ttsBtn.innerHTML = `<i class="fa-solid fa-volume-high"></i> TTS 읽어주기 On`;
+        showToast("텍스트 음성 읽어주기가 켜졌습니다.");
+      } else {
+        ttsBtn.classList.remove('active-tts');
+        ttsBtn.innerHTML = `<i class="fa-solid fa-volume-xmark"></i> TTS 읽어주기 Off`;
+        window.speechSynthesis.cancel();
+        showToast("텍스트 음성 읽어주기가 꺼졌습니다.");
+      }
+    }
+
+    function playTTS(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'ko-KR';
+      utterance.rate = 1.0;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    // 6. 🚀 신규 기능: 이모지 리액션
+    function sendReaction(emoji) {
+      showFloatingEmoji(emoji);
+      broadcastData({ type: 'reaction', emoji: emoji });
+    }
+
+    function showFloatingEmoji(emoji) {
+      const el = document.createElement('div');
+      el.className = 'floating-emoji';
+      el.innerText = emoji;
+      // 화면 하단 랜덤 위치에서 떠오르도록 설정
+      el.style.left = Math.floor(Math.random() * 60 + 20) + '%';
+      document.body.appendChild(el);
+      
+      setTimeout(() => el.remove(), 2500); // 애니메이션 종료 후 삭제
+    }
+
+    // 7. 🚀 신규 기능: 상대방 발언 상태 표시
+    function showPartnerStatus(text) {
+      const statusEl = document.getElementById('partner-status');
+      document.getElementById('partner-status-text').innerText = text;
+      statusEl.classList.add('show');
+      
+      clearTimeout(partnerTypingTimeout);
+      partnerTypingTimeout = setTimeout(() => {
+        hidePartnerStatus(); // 2초간 추가 입력 없으면 숨김
+      }, 2000);
+    }
+
+    function hidePartnerStatus() {
+      document.getElementById('partner-status').classList.remove('show');
+    }
+
+    // 8. 공통 유틸: 데이터 브로드캐스트 & UI 렌더링
     function broadcastData(data) {
       connections.forEach(conn => {
-        if (conn.open) {
-          conn.send(data);
-        }
+        if (conn.open) conn.send(data);
       });
     }
 
-    // Render Chat Message Bubble
     function appendChatMessage(sender, text, isMe, time) {
       const chatContainer = document.getElementById('chat-messages');
-      const messageCard = document.createElement('div');
-      messageCard.className = `message-card ${isMe ? 'me' : 'other'}`;
-
-      messageCard.innerHTML = `
+      const msg = document.createElement('div');
+      msg.className = `message-card ${isMe ? 'me' : 'other'}`;
+      msg.innerHTML = `
         <div class="message-meta">
-          <span>${escapeHtml(sender)}</span>
-          <span>•</span>
-          <span>${time}</span>
+          <span>${escapeHtml(sender)}</span> <span>•</span> <span>${time}</span>
         </div>
         <div class="message-bubble">${escapeHtml(text)}</div>
       `;
-
-      chatContainer.appendChild(messageCard);
-      chatContainer.scrollTop = chatContainer.scrollHeight;
+      chatContainer.appendChild(msg);
+      
+      // 🚀 무한 스크롤 방어: 항상 최하단으로 스크롤 부드럽게 이동
+      setTimeout(() => {
+        chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+      }, 50);
     }
 
-    // Add Participant to Sidebar UI
     function addParticipant(name, isMe = false, peerId = '') {
       const list = document.getElementById('participant-list');
       const item = document.createElement('div');
       item.className = 'participant-item';
       item.id = `user-${peerId || 'me'}`;
-
       item.innerHTML = `
         <div class="avatar">${name.charAt(0).toUpperCase()}</div>
         <div style="flex:1;">
           <div style="font-weight:600; font-size:0.9rem;">${escapeHtml(name)} ${isMe ? '(나)' : ''}</div>
-          <div style="font-size:0.75rem; color:var(--text-muted);">실시간 STT 음성 연결됨</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">실시간 접속됨</div>
         </div>
         <div class="status-dot"></div>
       `;
-
       list.appendChild(item);
       updateUserCount();
     }
 
     function updateUserCount() {
-      const count = document.querySelectorAll('.participant-item').length;
-      document.getElementById('user-count').innerText = count;
+      document.getElementById('user-count').innerText = document.querySelectorAll('.participant-item').length;
     }
 
-    // Timer Logic
     function startMeetingTimer() {
       timerInterval = setInterval(() => {
         secondsElapsed++;
-        const hrs = String(Math.floor(secondsElapsed / 3600)).padStart(2, '0');
-        const mins = String(Math.floor((secondsElapsed % 3600) / 60)).padStart(2, '0');
-        const secs = String(secondsElapsed % 60).padStart(2, '0');
-        document.getElementById('meeting-timer').innerText = `${hrs}:${mins}:${secs}`;
+        const h = String(Math.floor(secondsElapsed / 3600)).padStart(2, '0');
+        const m = String(Math.floor((secondsElapsed % 3600) / 60)).padStart(2, '0');
+        const s = String(secondsElapsed % 60).padStart(2, '0');
+        document.getElementById('meeting-timer').innerText = `${h}:${m}:${s}`;
       }, 1000);
     }
 
-    // Utility: Copy Room ID
     function copyRoomId() {
-      const roomId = document.getElementById('display-room-id').innerText;
-      navigator.clipboard.writeText(roomId).then(() => {
-        showToast("회의 ID가 클립보드에 복사되었습니다!");
-      });
+      const id = document.getElementById('display-room-id').innerText;
+      navigator.clipboard.writeText(id).then(() => showToast("회의 ID 복사 완료!"));
     }
 
-    // Utility: Export Transcript
     function exportTranscript() {
-      const messages = document.querySelectorAll('.message-card');
-      if (messages.length === 0) {
-        showToast("저장할 대화 내용이 없습니다.");
-        return;
-      }
-
-      let transcriptText = `=== VoiceText 회의록 (${new Date().toLocaleDateString()}) ===\n\n`;
-      messages.forEach(msg => {
-        const meta = msg.querySelector('.message-meta')?.innerText.replace(/\n/g, ' ') || '';
-        const body = msg.querySelector('.message-bubble')?.innerText || '';
-        if (body) {
-          transcriptText += `[${meta}] ${body}\n`;
-        }
+      const msgs = document.querySelectorAll('.message-card');
+      if (!msgs.length) return showToast("저장할 내용이 없습니다.");
+      let txt = `=== VoiceText 회의록 ===\n\n`;
+      msgs.forEach(m => {
+        const meta = m.querySelector('.message-meta')?.innerText.replace(/\n/g, ' ') || '';
+        const body = m.querySelector('.message-bubble')?.innerText || '';
+        if (body) txt += `[${meta}] ${body}\n`;
       });
-
-      const blob = new Blob([transcriptText], { type: 'text/plain;charset=utf-8' });
+      const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = `회의록_${new Date().toISOString().slice(0,10)}.txt`;
       a.click();
-      showToast("회의록 파일이 다운로드되었습니다.");
     }
 
-    // Toast Alert Helper
-    function showToast(message) {
-      const toast = document.getElementById('toast');
-      toast.innerText = message;
-      toast.classList.add('show');
-      setTimeout(() => {
-        toast.classList.remove('show');
-      }, 3000);
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
     }
 
-    // XSS Sanitizer
     function escapeHtml(text) {
-      return text.replace(/&/g, "&amp;")
-                 .replace(/</g, "&lt;")
-                 .replace(/>/g, "&gt;")
-                 .replace(/"/g, "&quot;")
-                 .replace(/'/g, "&#039;");
+      return text.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]);
     }
   </script>
 </body>
